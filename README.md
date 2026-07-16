@@ -8,6 +8,7 @@ In modern manufacturing, the quality of a component is often shaped by real-time
 
 The raw multimodal dataset is hosted on Zenodo:
 **Dataset DOI:** [10.5281/zenodo.21285367](https://doi.org/10.5281/zenodo.21285367)
+The data is also available in the `./dataset_zenodo/` folder.
 
 This competition and associated material are based upon work supported by the National Science Foundation under Grant Number **FMRG-2328395**. It is organized by the **Texas A&M Institute of Data Science** and the **Department of Engineering Technology & Industrial Distribution at Texas A&M University**.
 
@@ -24,6 +25,8 @@ This is a **two-week data challenge**. Participants receive a challenge prompt a
 | **Finalists** | Judges select 3–5 finalist teams; each presents for 10 minutes (including Q&A) |
 | **Organizers** | Texas A&M Institute of Data Science; Dept. of Engineering Technology & Industrial Distribution, Texas A&M University |
 | **Funding** | NSF Grant Number FMRG-2328395 |
+
+Submission link: https://tamu.qualtrics.com/jfe/form/SV_emSeErTTgRkWw3s?Q_CHL=gl&Q_DL=EMD_2gAbx5z26nWSQYC_emSeErTTgRkWw3s_CGC_9UIc7OKteuxR023&_g_=g
 
 ### Prizes
 
@@ -85,7 +88,14 @@ nsf-fmrg-data-challenge/
 │       ├── thermal/
 │       │   └── .gitkeep
 │       ├── sem/
-│       │   └── .gitkeep
+│       │   ├── SEM_8/
+│       │   │   └── PlainImages/
+│       │   ├── SEM_10/
+│       │   │   └── PlainImages/
+│       │   ├── SEM_14/
+│       │   │   └── PlainImages/
+│       │   └── SEM_21/
+│       │       └── PlainImages/
 │       └── height_maps/
 │           └── .gitkeep
 ├── notebooks/
@@ -96,7 +106,7 @@ nsf-fmrg-data-challenge/
 ├── scripts/
 │   └── run_thermal_video_export.py
 ├── paper/
-│   ├── 2607.07965v1.pdf
+│   ├── research_paper.md
 │   └── figures/
 │       ├── experimental_setup_optomec_bruker_zeiss.png
 │       └── modality_examples_three_panel.png
@@ -325,7 +335,7 @@ From the repository root:
 python -m pip install -r requirements.txt
 ```
 
-The notebooks are designed to run in Local System and/or Google Colab. For local use, a standard scientific Python environment with NumPy, SciPy, Matplotlib, Pillow, and Pandas is sufficient.
+The notebooks are designed to run in Local System and/or Google Colab. For local use, a standard scientific Python environment with NumPy, SciPy, Matplotlib, Pillow, and Pandas is sufficient. Utilize uv to create, manage, and work with virtual environments.
 
 ## Citation
 
