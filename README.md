@@ -146,13 +146,20 @@ The `.gitkeep` files are placeholders that keep the empty folders visible on Git
 
 **Challenge prompt:** Given a sequence of thermal images recorded during laser scanning, develop a model that predicts the **local geometric variation** of the final laser track.
 
-Participants should treat the laser track as a **spatially varying feature** rather than a perfectly uniform line. Even when process settings are held constant, a track's width, left/right boundaries, surface contour, and edge waviness vary continuously along the scan direction. A single global width value hides these variations. The objective is to learn how patterns in the thermal images — especially around the moving melt pool — relate to the final track geometry measured after processing. Candidate targets include:
+> **Organizer clarification (Discord, July 17, 2026):** The task, alignment, masking, and evaluation guidance below incorporates answers provided by the competition organizers in the competition Discord.
 
-- local track width (**primary expected target**),
+Participants should treat the laser track as a **spatially varying feature** rather than a perfectly uniform line. Even when process settings are held constant, a track's width, left/right boundaries, surface contour, and edge waviness vary continuously along the scan direction. A single global width value hides these variations. The objective is to learn how patterns in the thermal images — especially around the moving melt pool — relate to the final track geometry measured after processing.
+
+At minimum, a submission should describe either the local track width
+`w_i(x) = y_upper,i(x) - y_lower,i(x)` or the corresponding upper/lower (left/right) boundary functions. Here, `x` is a **spatial coordinate along the scan direction**, not time, so `w_i(x)` is a spatial sequence rather than a time series. Participants do not need to predict every possible geometry descriptor. Beyond the minimum output, representations may include any combination of:
+
 - left/right boundary position,
+- centerline displacement,
 - contour deviation,
 - edge roughness / waviness,
-- spatially varying probabilistic descriptors.
+- other vector-valued or probabilistic geometry descriptors.
+
+Width captures changes in track size. Separate boundary functions can additionally capture lateral shifting, asymmetry, and edge variation. Participants may use any physically meaningful internal representation, provided it is extracted consistently from the height maps and can be compared with measured local geometry.
 
 ### Three guiding principles
 
@@ -182,7 +189,7 @@ Because the melt pool moves continuously, a single physical location `x_j` is vi
 - **Thermal input `T_ij`** — a short *video tensor* of `2K + 1` consecutive frames centered on the frame where the melt pool is at `x_j`. Adjacent active frames are ≈ 0.2 mm apart, so the tensor captures heating, melt-pool behavior, and cooling around the same physical location.
 - **SEM input** — the local substrate-morphology patch covering `x_j`, with the **processed track region masked/excluded** to prevent target leakage (otherwise the model could directly observe the final geometry).
 - **Metadata** — physical coordinate `x`, laser power, and track identity `i`. You may also derive additional parameters such as **energy density**.
-- **Output** — a probability distribution over the local geometry `g_i(x)` (e.g. a mean width curve together with an uncertainty band across the 20–100 mm interval).
+- **Output** — at minimum, local width `w_i(x)` or the corresponding boundary functions; probabilistic models may additionally return a distribution over local geometry `g_i(x)` (e.g. a mean width curve with an uncertainty band across the 20–100 mm interval).
 
 ## Physical coordinate conventions
 
@@ -206,9 +213,36 @@ Because the modalities come from different sensors and file formats and are **no
 - Images are stored as per-track tiles in `PlainImages`.
 - Tile 01 corresponds to the physical 100 mm side.
 - The highest-numbered tile corresponds to the physical 20 mm side.
-- **Tile naming convention:** a file such as `PlainSEM_8_13` encodes track ID (`8`) and image number (`13`). For track 8, image `13` is the first tile (≈ 20 mm side); placing successive lower-numbered tiles to its left moves toward 100 mm, and image `01` (`8_01`) corresponds to the 100 mm side.
+- **Tile naming convention:** a file such as `Plain_SEM_8_13` encodes track ID (`8`) and image number (`13`).
 - The participant starter notebook reads SEM tiles but does not stitch them.
-- SEM images should be used to characterize surrounding substrate morphology. Avoid using the processed track region directly as an input feature — it must remain masked to prevent data leakage.
+
+#### Organizer-confirmed SEM stitching and alignment
+
+To align an SEM mosaic with the height map while preserving the vertical orientation:
+
+1. Stitch the unmodified SEM tiles in ascending file order (`Plain_SEM_8_01`, `Plain_SEM_8_02`, ..., `Plain_SEM_8_13` for track 8), using their actual overlapping image regions. Approximately **5% overlap** is a suggested starting point.
+2. Do **not** flip or rotate individual tiles.
+3. After stitching the complete mosaic, flip the entire mosaic horizontally:
+
+   ```python
+   sem_mosaic_aligned = np.fliplr(sem_mosaic)
+   ```
+
+After the flip, track 8 runs left-to-right as `Plain_SEM_8_13`, `Plain_SEM_8_12`, ..., `Plain_SEM_8_01`, matching the height map's returned 20–100 mm direction. A horizontal flip reverses only the scan-direction axis, so the top/bottom orientation is preserved.
+
+#### SEM masking requirements
+
+SEM input is intended to describe the **surrounding substrate morphology**—valleys, ridges, and other surface features that may affect local track formation. The processed laser-track region must be completely excluded so the model cannot infer the target from the final track appearance.
+
+The organizers suggested a masking scheme that:
+
+- is centered on the nominal laser scan path,
+- is defined in physical coordinates,
+- applies the same rule to every track,
+- covers the entire processed track region, and
+- includes a small safety margin so no part of the final track enters the SEM input.
+
+The clarification does not prescribe straight versus curved mask boundaries or one fixed mask size. Whatever construction is chosen should satisfy the exclusion requirements above and be documented so it can be applied reproducibly. All teams will be assessed under the same standardized evaluation framework.
 
 ### Bruker/Wyko height maps
 
@@ -219,7 +253,7 @@ Because the modalities come from different sensors and file formats and are **no
 - The loader sorts columns so returned height maps increase from 20 mm to 100 mm in actual part coordinates.
 - These profilometer-derived measurements serve as the **ground truth** for model training and evaluation.
 
-> **Note on width/boundary definitions:** There is no official/mandated convention for extracting local width or left/right boundaries from the height maps (e.g. a specific thresholding rule). The definition is left to participants — but you must **document** whatever convention you use.
+> **Ground-truth clarification:** The measured height map itself is the ground-truth spatial measurement. The organizers do not provide a separate label file or an official function for extracting width or boundaries. Participants must define and consistently apply their own post-processing method, justify why the resulting representation is physically meaningful, and document it for reproducibility.
 
 ## Recommended workflow
 
@@ -234,19 +268,32 @@ A recommended six-stage processing and modeling workflow:
 
 Throughout, **preventing SEM target leakage** (masking the processed track) is essential.
 
-## Validation strategy and evaluation metrics
+## Validation strategy and quantitative evaluation
 
 Because the dataset contains only **four track conditions**, the validation strategy matters. Randomly splitting neighboring coordinates from the same track into train/test sets produces overly optimistic results, since adjacent locations are spatially correlated (the model effectively sees almost the same region).
 
 - **Use cross-track validation.** Exclude one complete track during training and use it only for testing.
 - **Track 21 (200 W) is a useful conservative held-out case** — its profilometry coverage is less complete, which tests robustness to imperfect post-process measurement.
 
-Possible evaluation metrics:
+### Organizer-confirmed evaluation framework
+
+Final ranking is **not** based only on the report and presentation. Predictions will be evaluated quantitatively against geometry derived from the measured height maps. Although teams may choose different models and internal representations, every submission will be assessed using the same standardized framework and criteria.
+
+The quantitative evaluation will consider:
+
+- error between predicted and measured local width or boundary functions,
+- preservation of spatial variations along the track,
+- overall agreement between predicted and measured track geometry, and
+- for probabilistic models, the calibration and usefulness of predicted uncertainty.
+
+The organizer clarification did not specify exact metric formulas or numerical weights. For internal model development, useful candidate metrics include:
 
 - Mean absolute error (MAE) for local width,
 - Boundary position error,
 - Log-likelihood or Continuous Ranked Probability Score (CRPS) for probabilistic predictions,
 - Calibration error and uncertainty-interval coverage.
+
+These candidate metrics are development suggestions, not a claim that they are the final weighted ranking formula.
 
 ## Submission requirements
 
@@ -274,15 +321,25 @@ The Zip file must contain:
 
 ## Review / evaluation criteria
 
-Submissions are evaluated based on:
+The quantitative portion of evaluation focuses on:
 
 - accuracy of predicted local geometry,
-- ability to capture spatial track variations,
-- accuracy of derived width or boundary predictions,
+- error in local width or boundary predictions,
+- preservation of spatial track variations,
+- overall agreement with measured height-map geometry,
 - robustness across different laser powers,
-- quality of uncertainty estimation,
+- calibration and usefulness of uncertainty estimates for probabilistic submissions.
+
+The report and presentation assess complementary qualitative criteria, including:
+
+- physical justification of the chosen geometry representation,
+- reproducibility and consistency of geometry extraction,
+- interpretation of results,
+- novelty of the approach,
 - interpretability of thermal descriptors or learned features,
 - ability to distinguish process-driven variation from substrate-driven variation.
+
+The report and presentation support the judging process, but do not replace quantitative evaluation against the measured height maps.
 
 The judges select **3–5 finalist teams** to present at the Final Event on July 31, 2026. The top three teams win the main prizes, and special prizes are awarded for **Best Presentation Design** and **Most Innovative Approach**.
 
