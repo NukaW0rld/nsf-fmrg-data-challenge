@@ -2,16 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-07-19T19:53:39.852Z"
-last_activity: 2026-07-19 — ROADMAP.md and STATE.md created; requirements traceability updated
+current_phase: 01
+current_phase_name: target-extraction-contract
+status: executing
+stopped_at: Completed 01-target-extraction-contract-01-PLAN.md
+last_updated: "2026-07-19T23:34:14.131Z"
+last_activity: 2026-07-19
+last_activity_desc: Phase 01 execution started
 progress:
-  total_phases: 5
+  total_phases: 1
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-19)
 
 **Core value:** A thermal-only baseline that runs end-to-end — raw data in, cross-track-validated local-width predictions with calibrated uncertainty out — must work before anything else matters.
-**Current focus:** Phase 1 — Target Extraction & Contract
+**Current focus:** Phase 01 — target-extraction-contract
 
 ## Current Position
 
-Phase: 1 of 5 (Target Extraction & Contract)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-07-19 — ROADMAP.md and STATE.md created; requirements traceability updated
+Phase: 01 (target-extraction-contract) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-19 — Phase 01 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -52,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01-target-extraction-contract P01 | 16 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -62,6 +69,9 @@ Recent decisions affecting current work:
 
 - [Roadmap]: Thermal-only baseline sequenced strictly before SEM fusion; horizontal-layer phase order (target → alignment → harness → model → packaging), each phase gating the next.
 - [Roadmap]: v2 scope (interpretability, robustness ablation, conformal calibration, SEM fusion, boundary target) explicitly deferred out of the initial 5-phase roadmap — see ROADMAP.md Stretch section.
+- [Phase 01-target-extraction-contract]: Ratified A1: apply D-05/D-06 to each 0.2 mm binned median profile. — The literal native-column interpretation invalidates essentially every column; within-slot aggregation preserves locality.
+- [Phase 01-target-extraction-contract]: Ratified A2: invalidate half-max runs touching either y boundary. — A clipped run leaves the true bead edge and width outside the measured strip.
+- [Phase 01-target-extraction-contract]: Locked the shared extraction constants before the official four-track run. — Prevents outcome-contaminated tuning against the expected width ordering.
 
 ### Pending Todos
 
@@ -72,6 +82,7 @@ None yet.
 - [Phase 1]: No organizer-provided width extractor exists — TARGET-01 contract must be locked and visually validated against all 4 tracks (incl. track 21's incomplete profilometry) before Phase 2 begins.
 - [Phase 2]: Track 21's laser on/off thermal-detection heuristic is flagged (research/PITFALLS.md, Pitfall 9) as a plausible, unconfirmed misalignment risk — requires explicit numeric/visual cross-check during Phase 2, since track 21 is also the primary held-out evaluation track.
 - [Phase 3]: The LOTO harness must be validated leak-free with a dummy predictor before Phase 4 model training starts — this is a hard, non-negotiable gate per research/ARCHITECTURE.md.
+- Restricted raw data is already present in historical commit 831987c; remediate repository history before any external sharing.
 
 ## Deferred Items
 
@@ -83,6 +94,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-19T19:53:39.836Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-target-extraction-contract/01-CONTEXT.md
+Last session: 2026-07-19T23:33:48.614Z
+Stopped at: Completed 01-target-extraction-contract-01-PLAN.md
+Resume file: None

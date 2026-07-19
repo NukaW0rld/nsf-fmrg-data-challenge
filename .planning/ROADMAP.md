@@ -16,6 +16,7 @@ into the first ~3 days rather than discovering it late against a tuned model.
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -30,59 +31,75 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Target Extraction & Contract
+
 **Goal**: A documented, reproducible local-width extraction method is specified and then implemented, and is visually validated against all 4 tracks before anything downstream trusts it as ground truth.
 **Depends on**: Nothing (first phase)
 **Requirements**: TARGET-01, TARGET-02
 **Success Criteria** (what must be TRUE):
+
   1. The TARGET-01 contract (width definition `w_i(x)` = upper − lower boundary, relative-not-absolute threshold rule, spatial smoothing scale, 0.2mm output grid, valid-coordinate mask, and an explicit track-21 gap-handling rule) is written and reviewed before any extraction code is trusted.
   2. Running the extractor on all 4 tracks (8, 10, 14, 21) produces a `w_i(x)` curve per track showing the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21).
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
-**Plans:** 2 plans
+
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — Wave 0 env + `src/targets.py` contract module (D-01–D-16 as one shared parameterization) with synthetic contract-invariant tests
+
+- [x] 01-01-PLAN.md — Wave 0 env + `src/targets.py` contract module (D-01–D-16 as one shared parameterization) with synthetic contract-invariant tests
 - [ ] 01-02-PLAN.md — 4-track extraction runner, `.npz` + params persistence, QA figures (residual/overlay/width), raw-data prohibition check, artifact assertions, ordering investigation
 
 ### Phase 2: Dataset Alignment & Sample Construction
+
 **Goal**: Thermal and target coordinate grids are reconciled onto one canonical per-track x-grid, producing cached sample sets that are structurally safe from cross-fold leakage.
 **Depends on**: Phase 1
 **Requirements**: DATA-01, DATA-02
 **Success Criteria** (what must be TRUE):
+
   1. Each of the 4 tracks has a cached per-track sample manifest (`2K+1`-frame thermal window + width target + track id + laser power + physical x), restricted to Phase 1's valid-coordinate mask.
   2. An overlay QA plot per track confirms thermal `x_mm_center` and target `x` refer to the same physical location, with a numeric assertion that both ranges span ≈[20,100]mm for all 4 tracks — with extra scrutiny on track 21's laser on/off detection.
   3. Code inspection confirms every normalization/feature-selection transform is fit only inside a per-fold loop over that fold's training tracks — no transform is fit on pooled all-track data before any split exists.
+
 **Plans**: TBD
 
 ### Phase 3: LOTO Evaluation Harness & Metrics
+
 **Goal**: A leak-free, track-atomic cross-validation harness with correctly implemented evaluation metrics exists and is proven trustworthy using a trivial dummy predictor, before any real model is trained.
 **Depends on**: Phase 2
 **Requirements**: EVAL-01, EVAL-02, EVAL-03, METRIC-01, METRIC-02
 **Success Criteria** (what must be TRUE):
+
   1. `run_cv()` executes all 4 leave-one-track-out folds (track 21 as the primary held-out case), with normalization, feature selection, hyperparameter tuning, and calibration fit only within each fold's training tracks — code inspection confirms the held-out track's file is never opened during fitting.
   2. Running a dummy/trivial predictor (e.g., training-fold mean) through the full harness produces 4 separate track-level metric results (not one pooled number across ~400 spatially-correlated positions) with plausible, hand-checkable values — proving the harness itself works before any real model exists.
   3. The spatial-variation-preservation metric (METRIC-01: centered-curve correlation + first-difference/total-variation agreement) is defined, documented, and computes without error on the dummy predictor's output for all 4 folds.
   4. Per-held-out-track reporting includes MAE, spatial-variation preservation, and paired sharpness + calibration metrics (coverage/calibration error always reported alongside mean interval width or CRPS/NLL, never coverage alone) — verified on dummy-predictor output.
+
 **Plans**: TBD
 
 ### Phase 4: Thermal-Only Uncertainty-Aware Baseline Model
+
 **Goal**: A thermal-only model predicts local width with a genuine uncertainty estimate for every position in every held-out track, evaluated exclusively through the already-validated harness.
 **Depends on**: Phase 3
 **Requirements**: MODEL-01
 **Success Criteria** (what must be TRUE):
+
   1. The model produces both a mean/point prediction and an uncertainty estimate (variance or quantiles) for every position in each of the 4 held-out tracks.
   2. Running the model through the unchanged `run_cv()` harness produces per-track MAE, spatial-variation-preservation, and calibration/sharpness results for all 4 folds.
   3. Track 21 (primary held-out case) results are reviewed and confirmed not to be the product of any hyperparameter tuned while observing track 21's own score (anti-leakage/anti-peeking check).
+
 **Plans**: TBD
 
 ### Phase 5: Submission Packaging & Reporting
+
 **Goal**: The complete pipeline runs end-to-end from raw data to final metrics/figures via one documented entry point, verified reproducible and ready for competition submission.
 **Depends on**: Phase 4
 **Requirements**: SUBMIT-01, SUBMIT-02
 **Success Criteria** (what must be TRUE):
+
   1. A single documented entry point (script or notebook) runs the entire pipeline from raw data files to final metrics/figures with no manual data massaging between steps — verified via a fresh-clone/fresh-environment dry run completed at least one day before the deadline.
   2. Per-held-out-track figures are produced for all 4 tracks: predicted-vs-measured width curve with uncertainty band, and a calibration/sharpness plot.
   3. `requirements.txt` lists every dependency actually exercised (including `h5py` if any track needs the HDF5 fallback path), and `git log --all -- data/raw` is confirmed empty before a GitHub-link submission path is chosen.
+
 **Plans**: TBD
 
 ## Stretch / v2 (Not Yet Scheduled)
@@ -111,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 0/2 | Not started | - |
+| 1. Target Extraction & Contract | 1/2 | In Progress|  |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
