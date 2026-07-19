@@ -348,23 +348,29 @@ Nothing fast-moving here — FWHM/half-max width extraction on line-scan profile
 | A2 | Bin-median aggregation satisfies the *intent* of D-05's "never cross-column interpolation" | Finding 1 | High if user disagrees — but the alternative (literal per-column rule) provably yields zero output; needs explicit confirmation (Open Question 1) |
 | A3 | Track-10 boundary-clipped runs reflect real off-strip elevation (not a detrend artifact) | Finding 3 | Medium — D-14 residual-map QA will show if residual bow explains it; investigation task should check |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four questions were resolved during planning; each resolution is executable plan content in `01-01-PLAN.md` / `01-02-PLAN.md`.
 
 1. **Contract amendment: "column" → "0.2mm-binned profile" (D-05/D-06).**
    - What we know: literal per-native-column application yields ~0% valid columns on all 4 tracks; binned application yields 72–94% valid slots.
    - What's unclear: whether the user considers bin-median aggregation consistent with D-05's "never 2D/cross-column interpolation" wording.
    - Recommendation: planner adopts bin-first (aggregation ≠ interpolation; nothing crosses the 0.2mm output cell) and flags it for explicit user confirmation at the first checkpoint. The evidence table in Finding 1 should be shown.
+   - **RESOLVED → Amendment A1, plan 01-01:** adopted as the bin-first interpretation implemented in `bin_profile()` (plan 01-01 Task 2); user ratification is a blocking pre-compute gate at plan 01-01 Task 3 (checkpoint presents the Finding 1 evidence table), before plan 01-02's real-track extraction runs.
 
 2. **The width-ordering success criterion may fail between tracks 8 and 10.**
    - What we know: probe measures 10 > 8 on median/mean/trimmed-mean; 41% of track-10 bins are y-boundary-clipped, which the probe did *not* exclude.
    - What's unclear: whether the a-priori clip rule restores 8 > 10, or the physical ordering genuinely differs at these powers for *width* (organizer's "bigger melt pool" tip is about the thermal signature, not guaranteed post-solidification width monotonicity).
    - Recommendation: plan an explicit investigation + human checkpoint task: compute ordering with the locked rules; if 8/10 ordering fails, do **not** touch constants — document the finding, present QA evidence to the user, and decide (with the user) whether the roadmap gate is amended. This is a phase-gate risk the planner must schedule for, not a reason to change the extraction.
+   - **RESOLVED → ordering investigation, plan 01-02:** scheduled as a documented investigation — Task 1's runner prints pairwise PASS/FLAG lines (8 vs 10, 10 vs 14, 14 vs 21) and Task 2 records the investigation in the SUMMARY; constants are never tuned in response (prohibition P1); a FLAG escalates to the end-of-phase human decision on the roadmap gate.
 
 3. **Y-boundary clip rule (new validity criterion, not in D-01–D-16).**
    - What we know: half-max runs touching the 1.907mm y-window edge mean the true boundary is outside the measured strip (width unknowable); affects 26/117/13/39 bins on tracks 8/10/14/21.
    - Recommendation: include it as an a-priori validity rule alongside D-04's crossed-boundary rule; get user sign-off in the same confirmation as Question 1, *before* any ordering numbers are shown.
+   - **RESOLVED → Amendment A2, plan 01-01:** adopted a priori as the y-boundary clip rule in `halfmax_edges()` (plan 01-01 Task 2), ratified at the same plan 01-01 Task 3 blocking checkpoint as Question 1 — before any ordering number is computed in the phase's official run.
 
 4. **Bin aggregation minimums.** How many native columns (of ~50) and finite y-samples must a slot have? Recommendation: slot invalid if <10 native columns in bin or <50 finite samples in the binned profile (both matched the probe). Planner discretion; document as constants.
+   - **RESOLVED → constants, plan 01-01:** locked as `MIN_COLUMNS_PER_BIN = 10` and `MIN_VALID_Y_POINTS = 50` in the plan 01-01 Task 2 constants block; persisted via `extraction_params.json` provenance in plan 01-02.
 
 ## Environment Availability
 
