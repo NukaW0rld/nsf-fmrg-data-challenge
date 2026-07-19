@@ -38,7 +38,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Running the extractor on all 4 tracks (8, 10, 14, 21) produces a `w_i(x)` curve per track showing the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21).
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Wave 0 env + `src/targets.py` contract module (D-01–D-16 as one shared parameterization) with synthetic contract-invariant tests
+- [ ] 01-02-PLAN.md — 4-track extraction runner, `.npz` + params persistence, QA figures (residual/overlay/width), raw-data prohibition check, artifact assertions, ordering investigation
 
 ### Phase 2: Dataset Alignment & Sample Construction
 **Goal**: Thermal and target coordinate grids are reconciled onto one canonical per-track x-grid, producing cached sample sets that are structurally safe from cross-fold leakage.
@@ -107,7 +111,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 0/TBD | Not started | - |
+| 1. Target Extraction & Contract | 0/2 | Not started | - |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
