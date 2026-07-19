@@ -209,7 +209,7 @@ Because the modalities come from different sensors and file formats and are **no
 
 ### SEM data
 
-- File type: `.tif`
+- File type: `.png`
 - Images are stored as per-track tiles in `PlainImages`.
 - Tile 01 corresponds to the physical 100 mm side.
 - The highest-numbered tile corresponds to the physical 20 mm side.
@@ -259,7 +259,7 @@ The clarification does not prescribe straight versus curved mask boundaries or o
 
 A recommended six-stage processing and modeling workflow:
 
-1. **Load** the thermal `.mat` files, SEM `.tif` images, and ASCII height maps.
+1. **Load** the thermal `.mat` files, SEM `.png` images, and ASCII height maps.
 2. **Convert units consistently** — pixel positions to millimeters, and height values from nanometers to micrometers or millimeters.
 3. **Correct coordinate direction and crop** the shared 20–100 mm interval.
 4. **Construct aligned training pairs** by associating each thermal sequence and masked SEM morphology with the geometry target and the `x` coordinate.

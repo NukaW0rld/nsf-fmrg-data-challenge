@@ -4,10 +4,6 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Local data and generated outputs
-data/
-processed_data/
-*.mp4
-*.gif
 
 # Keep folder placeholders
 !processed_data/.gitkeep
