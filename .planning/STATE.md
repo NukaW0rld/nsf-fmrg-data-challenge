@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: target-extraction-contract
-status: executing
-stopped_at: Completed 01-target-extraction-contract-01-PLAN.md
-last_updated: "2026-07-19T23:34:14.131Z"
+status: verifying
+stopped_at: Completed 01-target-extraction-contract-02-PLAN.md
+last_updated: "2026-07-19T23:43:35.195Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 
 Phase: 01 (target-extraction-contract) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-19 — Phase 01 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01-target-extraction-contract P01 | 16 min | 3 tasks | 2 files |
+| Phase 01-target-extraction-contract P02 | 5 min | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Ratified A1: apply D-05/D-06 to each 0.2 mm binned median profile. — The literal native-column interpretation invalidates essentially every column; within-slot aggregation preserves locality.
 - [Phase 01-target-extraction-contract]: Ratified A2: invalidate half-max runs touching either y boundary. — A clipped run leaves the true bead edge and width outside the measured strip.
 - [Phase 01-target-extraction-contract]: Locked the shared extraction constants before the official four-track run. — Prevents outcome-contaminated tuning against the expected width ordering.
+- [Phase 01-target-extraction-contract]: Official median-width ordering passed for all three pairs; track 10 retains a separate 43.8% valid-fraction QA flag. — Ordering is diagnostic under locked constants; low coverage remains visible for human QA.
+- [Phase 01-target-extraction-contract]: Generated target artifacts remain local and reproducible under processed_data/targets/. — Committed runner and checker recreate and validate outputs without adding runtime data to source history.
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-19T23:33:48.614Z
-Stopped at: Completed 01-target-extraction-contract-01-PLAN.md
+Last session: 2026-07-19T23:43:35.191Z
+Stopped at: Completed 01-target-extraction-contract-02-PLAN.md
 Resume file: None
