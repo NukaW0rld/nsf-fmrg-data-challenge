@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from nsf_fmrg_data import load_wyko_asc, robust_plane_detrend, largest_true_run
+from nsf_fmrg_data import load_wyko_asc, robust_plane_detrend
 
 TARGET_GRID_START_MM = 20.1
 TARGET_GRID_STEP_MM = 0.2
@@ -12,6 +12,8 @@ PEAK_PCT = 95.0
 HALF_MAX_FRACTION = 0.5
 MIN_PEAK_BASELINE_SEPARATION_MM = 0.005
 MAX_GAP_PIXELS = 10
+# Discard a boundary anchor after this many consecutive untracked columns.
+MAX_TRACKING_GAP_COLUMNS = 10
 SG_WINDOW_PTS = 5
 SG_POLYORDER = 2
 MIN_VALID_Y_POINTS = 50
@@ -99,7 +101,18 @@ def fill_small_gaps(prof):
     return filled, True
 
 
-def halfmax_edges(prof, y_mm):
+def all_true_runs(mask):
+    mask = np.asarray(mask, dtype=bool)
+    if not mask.any():
+        return []
+    idx = np.flatnonzero(mask)
+    breaks = np.where(np.diff(idx) > 1)[0]
+    starts = np.r_[idx[0], idx[breaks + 1]]
+    stops = np.r_[idx[breaks] + 1, idx[-1] + 1]
+    return [(int(start), int(stop)) for start, stop in zip(starts, stops)]
+
+
+def halfmax_edges(prof, y_mm, previous_center=None):
     prof = np.asarray(prof, dtype=np.float64)
     y_mm = np.asarray(y_mm, dtype=np.float64)
     finite = np.isfinite(prof)
@@ -114,12 +127,26 @@ def halfmax_edges(prof, y_mm):
 
     threshold = base + HALF_MAX_FRACTION * (peak - base)
     above = np.where(finite, prof > threshold, False)
-    start, stop = largest_true_run(above)
-    if start is None:
+    # A run clipped by the measured strip has an unknowable true edge and is
+    # never a tracking candidate, even when it is closest to prior history.
+    candidates = [
+        (start, stop)
+        for start, stop in all_true_runs(above)
+        if start != 0 and stop != len(prof)
+    ]
+    if not candidates:
         return None
-    # A run clipped by the measured strip has an unknowable true edge.
-    if start == 0 or stop == len(prof):
-        return None
+    if previous_center is None:
+        start, stop = min(candidates, key=lambda run: (-(run[1] - run[0]), run[0]))
+    else:
+        start, stop = min(
+            candidates,
+            key=lambda run: (
+                abs(y_mm[(run[0] + run[1] - 1) // 2] - previous_center),
+                -(run[1] - run[0]),
+                run[0],
+            ),
+        )
 
     if np.isfinite(prof[start - 1]):
         y0 = y_mm[start - 1]
@@ -185,18 +212,27 @@ def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
     x_grid = target_grid()
     y_upper_raw = np.full(TARGET_GRID_N, np.nan, dtype=np.float64)
     y_lower_raw = np.full(TARGET_GRID_N, np.nan, dtype=np.float64)
+    previous_center = None
+    invalid_run_columns = 0
 
     for i, x_center in enumerate(x_grid):
+        if invalid_run_columns >= MAX_TRACKING_GAP_COLUMNS:
+            previous_center = None
         prof = bin_profile(Zd, x_actual_mm, x_center)
         if prof is None:
+            invalid_run_columns += 1
             continue
         prof, ok = fill_small_gaps(prof)
         if not ok:
+            invalid_run_columns += 1
             continue
-        edges = halfmax_edges(prof, y_mm)
+        edges = halfmax_edges(prof, y_mm, previous_center=previous_center)
         if edges is None:
+            invalid_run_columns += 1
             continue
         y_lower_raw[i], y_upper_raw[i] = edges
+        previous_center = 0.5 * (edges[0] + edges[1])
+        invalid_run_columns = 0
 
     y_lower, y_upper, w_mm, valid_mask = finalize_smoothed_boundaries(
         y_lower_raw,
