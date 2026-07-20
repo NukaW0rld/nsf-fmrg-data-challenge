@@ -45,8 +45,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2/2 plans executed
 
 Plans:
+**Wave 1**
 
 - [x] 01-01-PLAN.md — Wave 0 env + `src/targets.py` contract module (D-01–D-16 as one shared parameterization) with synthetic contract-invariant tests
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [x] 01-02-PLAN.md — 4-track extraction runner, `.npz` + params persistence, QA figures (residual/overlay/width), raw-data prohibition check, artifact assertions, ordering investigation
 
 ### Phase 2: Dataset Alignment & Sample Construction
