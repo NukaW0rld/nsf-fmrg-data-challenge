@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 2/2 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
@@ -52,6 +52,10 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 01-02-PLAN.md — 4-track extraction runner, `.npz` + params persistence, QA figures (residual/overlay/width), raw-data prohibition check, artifact assertions, ordering investigation
+
+**Wave 3** *(blocked on Wave 1 and Wave 2 completion)*
+
+- [ ] 01-03-PLAN.md — Gap closure for post-smoothing boundary validity, canonical raw/output containment, and success/failure raw-integrity verification
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
