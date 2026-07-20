@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: target-extraction-contract
-status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-07-20T05:24:50.225Z"
+status: ready_for_verification
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-07-20T05:37:00.329Z"
 last_activity: 2026-07-20
-last_activity_desc: Phase 01 execution started
+last_activity_desc: Completed Phase 01 Plan 05; ready for verification
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 
 ## Current Position
 
-Phase: 01 (target-extraction-contract) — EXECUTING
+Phase: 01 (target-extraction-contract) — READY FOR VERIFICATION
 Plan: 5 of 5
-Status: Ready to execute Plan 05
-Last activity: 2026-07-20 — Phase 01 execution started
+Status: All five plans executed; ready for phase verification
+Last activity: 2026-07-20 — Completed Plan 05 boundary continuity and sparse-window smoothing
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [████████░░] 80%
 | Phase 01-target-extraction-contract P02 | 5 min | 2 tasks | 20 files |
 | Phase 01-target-extraction-contract P03 | 7 min | 2 tasks | 4 files |
 | Phase 01-target-extraction-contract P04 | 4 min | 2 tasks | 5 files |
+| Phase 01-target-extraction-contract P05 | 6 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Amendment A3 fixes DETREND_POLY_ORDER=4 a priori from diagnosed per-track R² evidence and applies it identically to all tracks.
 - [Phase 01-target-extraction-contract]: The affine-compatible order=1 default, three-pass percentile trimming, and existing sampling stride remain unchanged for other callers.
 - [Phase 01-target-extraction-contract]: Post-fix width-ordering FLAGS are reported without changing any locked extraction constant.
+- [Phase 01-target-extraction-contract]: Continuity tracking selects the nearest non-clipped candidate while fresh, then falls back to largest-run selection after ten invalid columns. — Resolves multi-blob ambiguity without per-track tuning and prevents stale anchors from capturing long-gap resumptions.
+- [Phase 01-target-extraction-contract]: Three-point smoothing windows use degree finite_count minus two. — Retains at least one residual degree of freedom so sparse windows genuinely damp noise.
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-20T05:24:25.110Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-07-20T05:37:00.324Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
