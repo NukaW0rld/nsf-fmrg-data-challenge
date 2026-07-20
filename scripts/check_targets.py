@@ -72,6 +72,10 @@ def check_track(targets_dir: Path, track_id: int) -> dict:
         require(np.array_equal(np.isfinite(y_lower_mm), valid_mask), (
             f"Track {track_id}: finite lower-boundary slots do not equal valid_mask."
         ))
+        for key, values in (("w_mm", w_mm), ("y_upper_mm", y_upper_mm), ("y_lower_mm", y_lower_mm)):
+            require(np.isnan(values[~valid_mask]).all(), (
+                f"Track {track_id}: {key} invalid slots must be NaN, not merely non-finite."
+            ))
         require(np.allclose(w_mm[valid_mask], y_upper_mm[valid_mask] - y_lower_mm[valid_mask]), (
             f"Track {track_id}: width does not equal upper minus lower boundary."
         ))
