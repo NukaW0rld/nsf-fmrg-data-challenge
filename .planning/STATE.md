@@ -4,15 +4,15 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: target-extraction-contract
-status: ready_for_verification
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-07-20T05:37:00.329Z"
+status: ready_to_execute
+stopped_at: Planned gap-closure 01-06..01-08
+last_updated: "2026-07-20T16:34:40.000Z"
 last_activity: 2026-07-20
-last_activity_desc: Completed Phase 01 Plan 05; ready for verification
+last_activity_desc: Planned gap-closure plans 01-06..01-08 (provenance completeness + principled width-ordering fix); ready to execute
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 5
+  total_plans: 8
   completed_plans: 5
 ---
 
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 
 ## Current Position
 
-Phase: 01 (target-extraction-contract) — READY FOR VERIFICATION
-Plan: 5 of 5
-Status: All five plans executed; ready for phase verification
-Last activity: 2026-07-20 — Completed Plan 05 boundary continuity and sparse-window smoothing
+Phase: 01 (target-extraction-contract) — READY TO EXECUTE (gap closure)
+Plan: 5 of 8 (3 gap-closure plans pending)
+Status: 5 plans executed; verification found 2 gaps; gap-closure plans 01-06..01-08 planned and ready to execute
+Last activity: 2026-07-20 — Planned gap-closure (provenance completeness + width-ordering fix)
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
