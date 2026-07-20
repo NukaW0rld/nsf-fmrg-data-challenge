@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Planned 01-target-extraction-contract-03-PLAN.md
-last_updated: "2026-07-20T00:24:13.630Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-07-20T00:39:06.546Z"
 last_activity: 2026-07-19
-last_activity_desc: Phase 01 gap-closure plan created
+last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-07-19 — Phase 01 gap-closure plan created
+Last activity: 2026-07-19 — Phase 01 execution started
 
-Progress: [███████░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 |------|----------|-------|-------|
 | Phase 01-target-extraction-contract P01 | 16 min | 3 tasks | 2 files |
 | Phase 01-target-extraction-contract P02 | 5 min | 2 tasks | 20 files |
+| Phase 01-target-extraction-contract P03 | 7 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,10 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Locked the shared extraction constants before the official four-track run. — Prevents outcome-contaminated tuning against the expected width ordering.
 - [Phase 01-target-extraction-contract]: Official median-width ordering passed for all three pairs; track 10 retains a separate 43.8% valid-fraction QA flag. — Ordering is diagnostic under locked constants; low coverage remains visible for human QA.
 - [Phase 01-target-extraction-contract]: Generated target artifacts remain local and reproducible under processed_data/targets/. — Committed runner and checker recreate and validate outputs without adding runtime data to source history.
+- [Phase 01-target-extraction-contract]: Revalidate strict upper/lower ordering after separate smoothing and remask invalid slots before width derivation. — The published smoothed boundaries, not only their raw inputs, must satisfy the target contract.
+- [Phase 01-target-extraction-contract]: Anchor extraction to the script-derived repository and resolve every concrete output against the canonical root and raw tree. — Caller-controlled roots and existing symlinks cannot be trusted as filesystem safety boundaries.
+- [Phase 01-target-extraction-contract]: Preserve clean pipeline exceptions, but let raw deltas or audit unavailability take precedence with causal chaining. — Raw-data integrity evidence must fail closed on every validated pipeline exit.
+- [Phase 01-target-extraction-contract]: Accept the residual local TOCTOU window with repeated path resolution and a final digest audit. — The single-user scientific runner does not justify a new filesystem abstraction or dependency.
 
 ### Pending Todos
 
@@ -97,6 +102,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-19T23:43:35.191Z
-Stopped at: Completed 01-target-extraction-contract-02-PLAN.md
+Last session: 2026-07-20T00:38:44.641Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -55,7 +55,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 1 and Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Gap closure for post-smoothing boundary validity, canonical raw/output containment, and success/failure raw-integrity verification
+- [x] 01-03-PLAN.md — Gap closure for post-smoothing boundary validity, canonical raw/output containment, and success/failure raw-integrity verification
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
@@ -136,7 +136,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 2/2 | In Progress|  |
+| 1. Target Extraction & Contract | 3/3 | In Progress|  |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
