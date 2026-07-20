@@ -17,6 +17,9 @@ SG_POLYORDER = 2
 MIN_VALID_Y_POINTS = 50
 MIN_COLUMNS_PER_BIN = 10
 
+TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
+TRACK_IDS = tuple(TRACK_POWER_W)
+
 
 def target_grid():
     return TARGET_GRID_START_MM + TARGET_GRID_STEP_MM * np.arange(TARGET_GRID_N)
@@ -37,6 +40,27 @@ def extraction_params():
         'MIN_VALID_Y_POINTS': MIN_VALID_Y_POINTS,
         'MIN_COLUMNS_PER_BIN': MIN_COLUMNS_PER_BIN,
     }
+
+
+def print_results(summaries, track_ids=TRACK_IDS):
+    print("\ntrack  power_W  valid_bins  median_mm  mean_mm")
+    for summary in summaries:
+        print(
+            f'{summary["track_id"]:>5}  {summary["laser_power_w"]:>7}  '
+            f'{summary["valid_count"]:>10}  {summary["median_width_mm"]:>9.4f}  '
+            f'{summary["mean_width_mm"]:>7.4f}'
+        )
+
+    by_track = {summary["track_id"]: summary for summary in summaries}
+    for higher_track, lower_track in zip(track_ids, track_ids[1:]):
+        higher = by_track[higher_track]["median_width_mm"]
+        lower = by_track[lower_track]["median_width_mm"]
+        outcome = "PASS" if higher > lower else "FLAG"
+        print(
+            f"Ordering {higher_track} vs {lower_track}: "
+            f"{higher:.4f} mm > {lower:.4f} mm — {outcome}"
+        )
+    print("Ordering FLAG outcomes are documented and never used to tune locked extraction constants.")
 
 
 def bin_profile(Zd, x_actual_mm, x_center):

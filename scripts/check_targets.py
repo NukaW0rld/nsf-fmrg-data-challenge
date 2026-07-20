@@ -12,10 +12,8 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.append(str(SRC_DIR))
 
-from targets import extraction_params, target_grid
+from targets import TRACK_IDS, TRACK_POWER_W, extraction_params, print_results, target_grid
 
-TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
-TRACK_IDS = tuple(TRACK_POWER_W)
 EXPECTED_KEYS = {"x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm", "valid_mask"}
 FLOAT_KEYS = ("x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm")
 EXPECTED_SHAPE = (400,)
@@ -100,26 +98,6 @@ def check_track(targets_dir: Path, track_id: int) -> dict:
             "median_width_mm": float(np.median(w_mm[valid_mask])),
             "mean_width_mm": float(np.mean(w_mm[valid_mask])),
         }
-
-
-def print_results(summaries):
-    print("\ntrack  power_W  valid_bins  median_mm  mean_mm")
-    for summary in summaries:
-        print(
-            f'{summary["track_id"]:>5}  {summary["laser_power_w"]:>7}  '
-            f'{summary["valid_count"]:>10}  {summary["median_width_mm"]:>9.4f}  '
-            f'{summary["mean_width_mm"]:>7.4f}'
-        )
-
-    by_track = {summary["track_id"]: summary for summary in summaries}
-    for higher_track, lower_track in zip(TRACK_IDS, TRACK_IDS[1:]):
-        higher = by_track[higher_track]["median_width_mm"]
-        lower = by_track[lower_track]["median_width_mm"]
-        outcome = "PASS" if higher > lower else "FLAG"
-        print(
-            f"Ordering {higher_track} vs {lower_track}: "
-            f"{higher:.4f} mm > {lower:.4f} mm — {outcome}"
-        )
 
 
 def main():
