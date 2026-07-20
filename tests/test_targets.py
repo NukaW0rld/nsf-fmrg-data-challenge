@@ -223,11 +223,15 @@ def test_nan_savgol_preserves_quadratic_at_crop_edges():
     values = 0.3 * x**2 - 2.0 * x + 5.0
     smoothed = targets.nan_savgol(values)
 
-    require(np.allclose(smoothed, values, atol=1e-10), "quadratic data must survive smoothing")
+    require(np.allclose(smoothed[1:-1], values[1:-1], atol=1e-10), "quadratic data with four-point support must survive smoothing")
+    left_reference = np.polyval(np.polyfit([0, 1, 2], values[:3], 1), 0.0)
+    right_reference = np.polyval(np.polyfit([-2, -1, 0], values[-3:], 1), 0.0)
     require(
-        np.allclose(smoothed[[0, 1, -2, -1]], values[[0, 1, -2, -1]], atol=1e-10),
-        "crop-edge quadratic values must be preserved",
+        np.allclose(smoothed[[0, -1]], [left_reference, right_reference], atol=1e-10),
+        "G-01-3 crop-edge fits must match the independent degree-one reference",
     )
+    require(not np.isclose(left_reference, values[0]), "the left three-point fit must genuinely damp the quadratic edge")
+    require(not np.isclose(right_reference, values[-1]), "the right three-point fit must genuinely damp the quadratic edge")
 
 
 def test_nan_savgol_blends_across_masked_gaps():
@@ -237,9 +241,31 @@ def test_nan_savgol_blends_across_masked_gaps():
     values[[4, 6]] = np.nan
     smoothed = targets.nan_savgol(values)
 
-    require(np.isclose(smoothed[5], expected[5], atol=1e-10), "center fit may blend across masked neighbors")
+    center_reference = np.polyval(np.polyfit([-2, 0, 2], values[[3, 5, 7]], 1), 0.0)
+    require(np.isclose(smoothed[5], center_reference, atol=1e-10), "three-point gap fit must match the degree-one reference")
+    require(not np.isclose(center_reference, expected[5]), "three-point gap support must genuinely damp the quadratic center")
     require(np.isclose(smoothed[3], expected[3], atol=1e-10), "left fit may blend across a masked neighbor")
     require(np.isclose(smoothed[7], expected[7], atol=1e-10), "right fit may blend across a masked neighbor")
+
+
+def test_nan_savgol_no_longer_exact_interpolates_three_point_window():
+    values = np.array([np.nan, 0.0, 10.0, 0.0, np.nan])
+    smoothed = targets.nan_savgol(values)
+
+    require(np.isfinite(smoothed[2]), "the three-point center fit must remain finite")
+    require(not np.isclose(smoothed[2], values[2]), "three-point support must damp rather than exactly interpolate noise")
+
+
+def test_nan_savgol_track10_crop_edge_regression():
+    values = np.array([1.0, 1.1, 0.9, 1.0, np.nan, np.nan, np.nan, 0.0, 10.0, 0.0])
+    smoothed = targets.nan_savgol(values)
+
+    require(np.isfinite(smoothed[-3:]).all(), "the final Track-10-shaped run must remain finite")
+    require(
+        not np.array_equal(smoothed[-3:], values[-3:]),
+        "the final three-point run after a three-column gap must not pass through bit-identically",
+    )
+    require(np.all(np.abs(smoothed[-3:] - values[-3:]) > 1e-6), "all three terminal points must receive real damping")
 
 
 def test_single_parameterization_has_no_track_conditionals():
@@ -408,6 +434,8 @@ if __name__ == "__main__":
         test_nan_savgol_preserves_mask,
         test_nan_savgol_preserves_quadratic_at_crop_edges,
         test_nan_savgol_blends_across_masked_gaps,
+        test_nan_savgol_no_longer_exact_interpolates_three_point_window,
+        test_nan_savgol_track10_crop_edge_regression,
         test_single_parameterization_has_no_track_conditionals,
         test_track_id_does_not_affect_numeric_output,
         test_extraction_params_provenance,
