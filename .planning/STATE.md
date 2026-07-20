@@ -2,16 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_phase: 01
+current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-07-20T21:23:20.083Z"
+stopped_at: Completed 01-07-PLAN.md
+last_updated: "2026-07-20T21:32:36.294Z"
 last_activity: 2026-07-20
 progress:
-  total_phases: 5
+  total_phases: 1
   completed_phases: 0
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 7
 ---
 
 # Project State
@@ -26,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-07-20
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -62,6 +63,7 @@ Progress: [████████░░] 75%
 | Phase 01-target-extraction-contract P04 | 4 min | 2 tasks | 5 files |
 | Phase 01-target-extraction-contract P05 | 6 min | 2 tasks | 2 files |
 | Phase 01 P06 | 7 min | 2 tasks | 2 files |
+| Phase 01 P07 | 10 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -89,6 +91,7 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: The width-ordering regression is caused by DETREND_POLY_ORDER=4, not continuity tracking — verdict flips PASS to FLAG exactly at order=4 under both continuity settings.
 - [Phase 01-target-extraction-contract]: Continuity tracking has a real, uniform, order-independent effect that shrinks track 21's magnitude 3-4x, but never by itself flips the ordering verdict.
 - [Phase 01-target-extraction-contract]: Pre-registered the fix-selection criterion (residual structure / physical plausibility — the detrend background must not follow the bead) before any fix is chosen or applied, naming bead-masking as the endorsed remedy.
+- [Phase 01-target-extraction-contract]: Implemented the plan-06 endorsed bead-region masking of the detrend surface fit (BEAD_MASK_HEIGHT_FRACTION fixed at the already-locked HALF_MAX_FRACTION), completed extraction_params() provenance (MAX_TRACKING_GAP_COLUMNS, BEAD_MASK_HEIGHT_FRACTION, 15 keys), and canonicalized both as Amendment A4.
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-20T21:23:20.074Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-07-20T21:32:36.289Z
+Stopped at: Completed 01-07-PLAN.md
 Resume file: None

@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 8 plans (5 executed; 3 gap-closure plans pending — 01-06…01-08)
+**Plans:** 7/8 plans executed
 
 Plans:
 **Wave 1**
@@ -71,7 +71,7 @@ Plans:
 
 **Wave 7** *(gap closure, blocked on Wave 6 completion)*
 
-- [ ] 01-07-PLAN.md — Gap 2 + Gap 1: apply ONE uniform track-independent fix (bead-mask before detrend), complete `extraction_params()` (MAX_TRACKING_GAP_COLUMNS + fix param) with change-sensitive provenance, and record Amendment A4
+- [x] 01-07-PLAN.md — Gap 2 + Gap 1: apply ONE uniform track-independent fix (bead-mask before detrend), complete `extraction_params()` (MAX_TRACKING_GAP_COLUMNS + fix param) with change-sensitive provenance, and record Amendment A4
 
 **Wave 8** *(gap closure, blocked on Wave 7 completion)*
 
@@ -156,7 +156,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 5/5 | In Progress|  |
+| 1. Target Extraction & Contract | 7/8 | In Progress|  |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
