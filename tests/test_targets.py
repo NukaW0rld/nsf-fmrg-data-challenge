@@ -137,6 +137,49 @@ def test_single_parameterization_has_no_track_conditionals():
     require(track_conditional.search(source) is None, "target extraction must not branch on track id")
 
 
+def test_track_id_does_not_affect_numeric_output():
+    # Behavioral guard for TARGET-02: even parameterizations that dodge the
+    # regex above (e.g. PARAMS_BY_TRACK[track_id], match statements) must
+    # still fail this, since it drives identical input data through
+    # extract_track_targets under two different track ids and requires
+    # bit-identical numeric output.
+    x_actual_mm = 20.0 + 0.004 * np.arange(2000, dtype=np.float64)
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    Z_mm = np.zeros((len(y_mm), len(x_actual_mm)), dtype=np.float64)
+    ridge = (y_mm >= 0.65) & (y_mm <= 1.25)
+    Z_mm[ridge, :] = 0.02
+
+    def fake_loader(height_dir, track_id):
+        return {
+            "file": f"Heightmap_{track_id}.ASC",
+            "header": {"pixel_size_mm": 0.004},
+            "Z_mm": Z_mm.copy(),
+            "x_actual_mm": x_actual_mm.copy(),
+            "y_mm": y_mm.copy(),
+        }
+
+    original_loader = targets.load_wyko_asc
+    targets.load_wyko_asc = fake_loader
+    try:
+        result_a = targets.extract_track_targets(Path("unused"), 8)
+        result_b = targets.extract_track_targets(Path("unused"), 21)
+    finally:
+        targets.load_wyko_asc = original_loader
+
+    require(result_a["track_id"] != result_b["track_id"], "test sanity: track ids must actually differ")
+    numeric_keys = (
+        "x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm", "valid_mask",
+        "Z_mm", "Zd_mm", "x_actual_mm", "y_mm",
+    )
+    for key in numeric_keys:
+        a = np.asarray(result_a[key])
+        b = np.asarray(result_b[key])
+        require(
+            np.array_equal(a, b, equal_nan=True),
+            f"{key} must be identical across track ids for identical input data",
+        )
+
+
 def test_extraction_params_provenance():
     expected = {
         "TARGET_GRID_START_MM": 20.1,
@@ -245,6 +288,7 @@ if __name__ == "__main__":
         test_nan_savgol_preserves_quadratic_at_crop_edges,
         test_nan_savgol_blends_across_masked_gaps,
         test_single_parameterization_has_no_track_conditionals,
+        test_track_id_does_not_affect_numeric_output,
         test_extraction_params_provenance,
         test_post_smoothing_crossing_is_invalidated,
         test_post_smoothing_zero_valid_raises_value_error,
