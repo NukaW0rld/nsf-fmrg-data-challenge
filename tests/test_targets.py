@@ -146,6 +146,29 @@ def test_halfmax_edges_excludes_clipped_runs_from_tracking_candidates():
     require(np.mean(edges) > y_mm[200], "tracking must never select the nearer boundary-clipped run")
 
 
+def test_bead_mask_rule_is_track_independent():
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    x_actual_mm = 20.0 + 0.004 * np.arange(50, dtype=np.float64)
+    bead_rows = (y_mm >= 0.6) & (y_mm <= 0.8)
+
+    def synthetic_track(bead_height):
+        Z = np.zeros((len(y_mm), len(x_actual_mm)), dtype=np.float64)
+        Z[bead_rows, :] = bead_height
+        return Z
+
+    low_track = synthetic_track(0.02)
+    high_track = synthetic_track(0.2)
+
+    low_mask = targets.bead_exclusion_mask(low_track)
+    high_mask = targets.bead_exclusion_mask(high_track)
+
+    require(low_mask.shape == low_track.shape, "the fit mask must match the input map shape")
+    require(not low_mask[bead_rows, :].any(), "the low-height bead corridor must be excluded")
+    require(not high_mask[bead_rows, :].any(), "the high-height bead corridor must be excluded")
+    require(low_mask[~bead_rows, :].all(), "low-track background must remain included")
+    require(high_mask[~bead_rows, :].all(), "high-track background must remain included")
+
+
 def _binned_synthetic_profiles(profile_by_bin):
     bin_count = max(profile_by_bin) + 1
     x_actual_mm = 20.0 + 0.004 * np.arange(50 * bin_count, dtype=np.float64)
@@ -335,9 +358,54 @@ def test_extraction_params_provenance():
         "MIN_VALID_Y_POINTS": 50,
         "MIN_COLUMNS_PER_BIN": 10,
         "DETREND_POLY_ORDER": 4,
+        "MAX_TRACKING_GAP_COLUMNS": 10,
+        "BEAD_MASK_HEIGHT_FRACTION": 0.5,
     }
 
-    require(targets.extraction_params() == expected, "the exact 12-value extraction parameterization changed")
+    require(targets.extraction_params() == expected, "the exact 15-value extraction parameterization changed")
+
+
+def test_provenance_includes_tracking_gap_and_fix_param():
+    params = targets.extraction_params()
+
+    require("MAX_TRACKING_GAP_COLUMNS" in params, "provenance must include the tracking-gap timeout")
+    require(
+        params["MAX_TRACKING_GAP_COLUMNS"] == targets.MAX_TRACKING_GAP_COLUMNS,
+        "tracking-gap provenance value must match the module constant",
+    )
+    require("BEAD_MASK_HEIGHT_FRACTION" in params, "provenance must include the Gap-2 bead-mask fix parameter")
+    require(
+        params["BEAD_MASK_HEIGHT_FRACTION"] == targets.BEAD_MASK_HEIGHT_FRACTION,
+        "bead-mask fraction provenance value must match the module constant",
+    )
+
+
+def test_provenance_digest_is_change_sensitive():
+    import hashlib
+    import json
+
+    def digest():
+        return hashlib.sha256(
+            json.dumps(targets.extraction_params(), sort_keys=True).encode("utf-8")
+        ).hexdigest()
+
+    baseline = digest()
+
+    original_gap = targets.MAX_TRACKING_GAP_COLUMNS
+    try:
+        targets.MAX_TRACKING_GAP_COLUMNS = 999
+        require(digest() != baseline, "mutating MAX_TRACKING_GAP_COLUMNS must change the provenance digest")
+    finally:
+        targets.MAX_TRACKING_GAP_COLUMNS = original_gap
+    require(digest() == baseline, "restoring MAX_TRACKING_GAP_COLUMNS must restore the baseline digest")
+
+    original_fraction = targets.BEAD_MASK_HEIGHT_FRACTION
+    try:
+        targets.BEAD_MASK_HEIGHT_FRACTION = 0.999
+        require(digest() != baseline, "mutating BEAD_MASK_HEIGHT_FRACTION must change the provenance digest")
+    finally:
+        targets.BEAD_MASK_HEIGHT_FRACTION = original_fraction
+    require(digest() == baseline, "restoring BEAD_MASK_HEIGHT_FRACTION must restore the baseline digest")
 
 
 def test_post_smoothing_crossing_is_invalidated():
@@ -429,6 +497,7 @@ if __name__ == "__main__":
         test_halfmax_edges_prefers_largest_run_without_previous_center,
         test_halfmax_edges_tracks_nearest_run_to_previous_center,
         test_halfmax_edges_excludes_clipped_runs_from_tracking_candidates,
+        test_bead_mask_rule_is_track_independent,
         test_extract_targets_from_arrays_boundary_tracking_survives_decoy_blob,
         test_halfmax_edges_resets_stale_history_after_long_invalid_gap,
         test_nan_savgol_preserves_mask,
@@ -439,6 +508,8 @@ if __name__ == "__main__":
         test_single_parameterization_has_no_track_conditionals,
         test_track_id_does_not_affect_numeric_output,
         test_extraction_params_provenance,
+        test_provenance_includes_tracking_gap_and_fix_param,
+        test_provenance_digest_is_change_sensitive,
         test_post_smoothing_crossing_is_invalidated,
         test_post_smoothing_zero_valid_raises_value_error,
         test_all_invalid_track_raises_value_error,

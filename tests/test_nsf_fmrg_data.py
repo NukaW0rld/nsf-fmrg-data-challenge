@@ -76,6 +76,64 @@ def test_degenerate_fallback_is_preserved_for_all_orders():
         require(residual is not Z_mm, "the fallback must return a copy, not the input object")
 
 
+def test_robust_plane_detrend_fit_mask_excludes_bead_from_fit():
+    # Synthetic height map = smooth low-order background (identical to the
+    # existing quartic-bow regression) + an elevated rectangular bead
+    # corridor whose height itself varies smoothly along x (the along-track
+    # direction), mirroring the 01-06-DIAGNOSIS mechanism: an unmasked
+    # order-4 fit has enough x-degrees-of-freedom to partially absorb the
+    # bead's own along-track profile into the "background."
+    x_mm, y_mm, x_grid, y_grid = synthetic_grid()
+    centered_x = (x_grid - 60.0) / 40.0
+    background = 0.003 * x_grid - 0.02 * y_grid + 0.7 + (
+        0.08 * centered_x**4 - 0.03 * centered_x**2
+    )
+    bead_amplitude_x = np.clip(0.15 * (1.0 - centered_x**2), 0.0, None)
+    bead_rows = (y_grid >= 0.6) & (y_grid <= 1.4)
+    Z_mm = background.copy()
+    Z_mm[bead_rows] += bead_amplitude_x[bead_rows]
+
+    fit_mask = np.ones(Z_mm.shape, dtype=bool)
+    fit_mask[bead_rows] = False
+
+    residual_unmasked, coef_unmasked = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm, order=4
+    )
+    residual_masked, coef_masked = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm, order=4, fit_mask=fit_mask
+    )
+
+    require(coef_unmasked is not None, "the unmasked order-4 fit must produce coefficients")
+    require(coef_masked is not None, "the masked order-4 fit must produce coefficients")
+    require(
+        residual_masked.shape == Z_mm.shape and residual_unmasked.shape == Z_mm.shape,
+        "fit_mask must not change the output shape or coverage",
+    )
+
+    center_x_idx = int(np.argmin(np.abs(x_mm - 60.0)))
+    bead_row_idx = int(np.argmin(np.abs(y_mm - 1.0)))
+    background_row_idx = int(np.argmin(np.abs(y_mm - 0.1)))
+    true_bead_height = float(bead_amplitude_x[bead_row_idx, center_x_idx])
+
+    unmasked_bead_height = float(
+        residual_unmasked[bead_row_idx, center_x_idx]
+        - residual_unmasked[background_row_idx, center_x_idx]
+    )
+    masked_bead_height = float(
+        residual_masked[bead_row_idx, center_x_idx]
+        - residual_masked[background_row_idx, center_x_idx]
+    )
+
+    require(
+        masked_bead_height > 0.9 * true_bead_height,
+        "the masked fit must recover the bead's true height at the corridor peak",
+    )
+    require(
+        unmasked_bead_height < 0.5 * true_bead_height,
+        "the unmasked order-4 fit must suppress the bead height by absorbing it into the background",
+    )
+
+
 def test_polynomial_basis_sizes_are_stable():
     x_mm, y_mm, x_grid, y_grid = synthetic_grid()
     Z_mm = 0.003 * x_grid - 0.02 * y_grid + 0.7
@@ -97,6 +155,7 @@ if __name__ == "__main__":
         test_order_four_removes_quartic_bow,
         test_degenerate_fallback_is_preserved_for_all_orders,
         test_polynomial_basis_sizes_are_stable,
+        test_robust_plane_detrend_fit_mask_excludes_bead_from_fit,
     ]
     for test in tests:
         test()
