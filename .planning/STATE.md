@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-07-20T00:39:06.546Z"
-last_activity: 2026-07-19
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-07-20T05:24:50.225Z"
+last_activity: 2026-07-20
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-07-19 — Phase 01 execution started
+Plan: 5 of 5
+Status: Ready to execute Plan 05
+Last activity: 2026-07-20 — Phase 01 execution started
 
-Progress: [██████████] 100%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 01-target-extraction-contract P01 | 16 min | 3 tasks | 2 files |
 | Phase 01-target-extraction-contract P02 | 5 min | 2 tasks | 20 files |
 | Phase 01-target-extraction-contract P03 | 7 min | 2 tasks | 4 files |
+| Phase 01-target-extraction-contract P04 | 4 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Anchor extraction to the script-derived repository and resolve every concrete output against the canonical root and raw tree. — Caller-controlled roots and existing symlinks cannot be trusted as filesystem safety boundaries.
 - [Phase 01-target-extraction-contract]: Preserve clean pipeline exceptions, but let raw deltas or audit unavailability take precedence with causal chaining. — Raw-data integrity evidence must fail closed on every validated pipeline exit.
 - [Phase 01-target-extraction-contract]: Accept the residual local TOCTOU window with repeated path resolution and a final digest audit. — The single-user scientific runner does not justify a new filesystem abstraction or dependency.
+- [Phase 01-target-extraction-contract]: Amendment A3 fixes DETREND_POLY_ORDER=4 a priori from diagnosed per-track R² evidence and applies it identically to all tracks.
+- [Phase 01-target-extraction-contract]: The affine-compatible order=1 default, three-pass percentile trimming, and existing sampling stride remain unchanged for other callers.
+- [Phase 01-target-extraction-contract]: Post-fix width-ordering FLAGS are reported without changing any locked extraction constant.
 
 ### Pending Todos
 
@@ -102,6 +106,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-20T00:38:44.641Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-07-20T05:24:25.110Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None

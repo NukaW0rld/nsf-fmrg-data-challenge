@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -59,7 +59,7 @@ Plans:
 
 **Wave 4** *(gap closure, blocked on Wave 1–3 completion)*
 
-- [ ] 01-04-PLAN.md — G-01-1: upgrade `robust_plane_detrend` to a configurable-order robust surface fit (Amendment A3), regenerate real 4-track residual-map QA
+- [x] 01-04-PLAN.md — G-01-1: upgrade `robust_plane_detrend` to a configurable-order robust surface fit (Amendment A3), regenerate real 4-track residual-map QA
 
 **Wave 5** *(gap closure, blocked on Wave 4 completion)*
 
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 3/5 | In Progress|  |
+| 1. Target Extraction & Contract | 4/5 | In Progress|  |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
