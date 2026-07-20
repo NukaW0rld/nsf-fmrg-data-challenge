@@ -11,8 +11,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.append(str(SRC_DIR))
+SCRIPTS_DIR = REPO_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.append(str(SCRIPTS_DIR))
 
 from targets import TRACK_IDS, TRACK_POWER_W, extraction_params, print_results, target_grid
+from run_target_extraction import resolve_raw_dir, resolve_repository_root
 
 EXPECTED_KEYS = {"x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm", "valid_mask"}
 FLOAT_KEYS = ("x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm")
@@ -104,7 +108,9 @@ def main():
     parser = argparse.ArgumentParser(description="Assert persisted NSF FMRG target artifacts.")
     parser.add_argument("--project_dir", type=Path, default=Path("."), help="Repository/project root.")
     args = parser.parse_args()
-    targets_dir = args.project_dir.resolve() / "processed_data" / "targets"
+    project_root = resolve_repository_root(args.project_dir, repository_anchor=REPO_ROOT)
+    resolve_raw_dir(project_root)
+    targets_dir = project_root / "processed_data" / "targets"
 
     params_path = targets_dir / "extraction_params.json"
     require(params_path.exists(), f"Missing extraction provenance {params_path}.")
