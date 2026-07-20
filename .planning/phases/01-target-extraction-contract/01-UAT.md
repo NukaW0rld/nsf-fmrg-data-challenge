@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-target-extraction-contract
 source: [01-VERIFICATION.md]
 started: 2026-07-20T00:54:17Z
-updated: 2026-07-20T01:35:00Z
+updated: 2026-07-20T01:55:00Z
 ---
 
 ## Current Test
@@ -55,8 +55,16 @@ blocked: 0
   reason: "User reported: plane fit removes tilt but not quadratic curvature; tracks 8, 10, and 14 show a coherent track-wide red-blue-red (end-positive/center-negative) residual bow, and track 21 shows systematic long-wavelength alternating lobes. This is too spatially coherent to be local substrate roughness."
   severity: major
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "robust_plane_detrend() (src/nsf_fmrg_data.py:205-227) fits only a first-order affine surface (z = a*x + b*y + c) by design -- this is the documented, anticipated escalation trigger from Phase 01's own D-14 decision ('add a mandatory QA step; if curvature is visible, escalate to a fix at that point -- don't pre-solve an unconfirmed problem') and PITFALLS.md Pitfall 6. Not an implementation bug: axis mapping, invalid-sample exclusion, and iterative outlier trimming are all correct, and all 4 tracks use one identical call/parameterization. Quantitative re-derivation on the real .ASC files: quadratic model explains 96-98% of post-detrend residual variance on tracks 8/14 (vs 0.1-3.6% for linear), confirming the visual bow; track 21 needs quartic-or-higher (matches its reported alternating-lobe/long-wavelength pattern)."
+  artifacts:
+    - path: "src/nsf_fmrg_data.py:205-227"
+      issue: "robust_plane_detrend design matrix has only 3 columns (x, y, intercept) -- structurally cannot remove quadratic/higher-order curvature"
+    - path: "src/targets.py:220"
+      issue: "extract_track_targets calls the plane detrend identically for all 4 tracks (no per-track workaround exists)"
+  missing:
+    - "Escalate per D-14/SPEC boundaries: upgrade robust_plane_detrend (or add a follow-up step) to a higher-order surface fit (e.g. quadratic design matrix [x^2, y^2, xy, x, y, 1]) while keeping the same robust/iterative outlier-trimming scheme"
+    - "Track 21 may need a higher-order polynomial or smoothed non-parametric long-wavelength baseline beyond pure quadratic, without breaking the shared-parameterization constraint (TARGET-02)"
+  debug_session: ".planning/debug/residual-curvature-after-detrend.md"
 
 - gap_id: G-01-2
   truth: "Boundaries follow the bead without unacceptable sawtooth or high-frequency excursions, and invalid regions are visibly masked rather than bridged or dropped."
@@ -64,8 +72,16 @@ blocked: 0
   reason: "User reported: boundary tracking is unacceptably jagged/sawtoothed on all four tracks (worst on Track 21 with EKG-like jumps, and Track 10's lower boundary), while gap/invalid-region handling correctly shows explicit breaks rather than smoothed-over interpolation on all tracks."
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "halfmax_edges() (src/targets.py:99-141) selects each column's boundary as the single largest contiguous above-half-max-threshold run, computed completely independently per column with zero cross-column continuity constraint. 98-100% of valid columns on every track contain more than one above-threshold blob (bead + substrate-texture blobs of similar magnitude, per RESEARCH.md Finding 4's pre-implementation warning), so which blob 'wins' flips unpredictably column-to-column -- raw single-step jumps up to 0.67-1.38mm measured directly. nan_savgol() (src/targets.py:144-162), the only anti-jitter step, is an ordinary non-robust least-squares 5-point filter with no outlier rejection; it roughly halves jump std-dev but cannot eliminate large/persistent blob-flip jumps. Confirmed NOT a coding bug -- all functions match their locked D-01-D-16/A1/A2 contract exactly (consistent with 01-VERIFICATION.md's 14/14 passing mechanical tests). This is a scientific/robustness gap in the currently-locked algorithm design, not an implementation defect."
+  artifacts:
+    - path: "src/targets.py:99-141"
+      issue: "halfmax_edges: per-column independent 'largest run' selection with no continuity constraint linking neighboring columns"
+    - path: "src/targets.py:144-162"
+      issue: "nan_savgol: ordinary least-squares smoother, not robust/outlier-rejecting, insufficient to suppress blob-flip jumps produced upstream"
+  missing:
+    - "Algorithm-level amendment (like A1/A2, not a silent patch): add a cross-column continuity/tracking constraint (e.g. constrain each column's selected run to stay near the previous valid column's location, or a dynamic-programming/Viterbi-style boundary tracker) instead of independent per-column largest-run selection"
+    - "And/or widen and robustify the post-hoc smoother (robust/iteratively-reweighted local fit with outlier down-weighting, similar in spirit to robust_plane_detrend's trimming) rather than an ordinary least-squares 5-point window"
+  debug_session: ".planning/debug/boundary-tracking-sawtooth.md"
 
 - gap_id: G-01-3
   truth: "Real-data edge behavior is scientifically plausible and free of crop-edge artifacts."
@@ -73,5 +89,10 @@ blocked: 0
   reason: "User reported: Track 10's right edge shows a sharp terminal V/spike (~0.228 -> 0.147 -> 0.800 mm, ~5.4x final jump) consistent with edge instability. Track 14's right edge passes; Track 8 and most of Track 21 are masked/disconnected and not assessable. Requested investigation of Track 10's final three grid points against raw (pre-smoothed) boundaries."
   severity: minor
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "Degenerate zero-smoothing condition in nan_savgol() (src/targets.py:144-162), triggered by Track 10's specific data pattern at the crop edge -- not a masking bug. Track 10 has a legitimate, ratified Amendment A2 invalidation at grid indices 394-396 (largest run touches y=0, correctly returns None). This 3-column gap sits immediately before the final valid run (indices 397-399, the true end of the 400-point grid), so nan_savgol's 5-point window (half-width 2) can only ever find exactly 3 finite neighbors there. Its degree formula min(SG_POLYORDER=2, finite_count-1) then gives degree=2 with finite_count=3: a quadratic fit through exactly 3 points is an exact interpolant (zero residual degrees of freedom) -- smoothing is a silent no-op. Verified bit-identical raw vs 'smoothed' w_mm at indices 393/397/398/399, vs real damping at 390-392 (full window). Track 14 escapes this because its preceding A2 gap is 1 column shorter, leaving a full window at 397/398."
+  artifacts:
+    - path: "src/targets.py:144-162"
+      issue: "nan_savgol degree-selection formula min(SG_POLYORDER, finite_count-1) allows zero residual degrees of freedom when a window has exactly SG_POLYORDER+1 (=3) finite points, silently disabling smoothing with no flag for the under-supported position"
+  missing:
+    - "Require strictly more finite points than degree+1 before treating a window as a real smoothing fit (e.g. only allow degree-2 fits when finite_count >= 4), falling back to a lower-order/linear fit or explicitly flagging low-confidence positions when finite_count <= SG_POLYORDER+1"
+  debug_session: ".planning/debug/track10-crop-edge-spike.md"
