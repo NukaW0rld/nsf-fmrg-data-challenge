@@ -67,7 +67,7 @@ Plans:
 
 **Wave 6** *(gap closure, blocked on Wave 5 completion)*
 
-- [ ] 01-06-PLAN.md — Gap 2 diagnostic: uniform detrend-order {1,2,4} × continuity on/off sweep on all 4 tracks; isolate the width-collapse root cause and pre-register an outcome-independent fix-selection criterion
+- [x] 01-06-PLAN.md — Gap 2 diagnostic: uniform detrend-order {1,2,4} × continuity on/off sweep on all 4 tracks; isolate the width-collapse root cause and pre-register an outcome-independent fix-selection criterion
 
 **Wave 7** *(gap closure, blocked on Wave 6 completion)*
 

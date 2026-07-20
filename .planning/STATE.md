@@ -2,18 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: target-extraction-contract
-status: ready_to_execute
-stopped_at: Planned gap-closure 01-06..01-08
-last_updated: "2026-07-20T16:34:40.000Z"
+status: executing
+stopped_at: Completed 01-06-PLAN.md
+last_updated: "2026-07-20T21:23:20.083Z"
 last_activity: 2026-07-20
-last_activity_desc: Planned gap-closure plans 01-06..01-08 (provenance completeness + principled width-ordering fix); ready to execute
 progress:
-  total_phases: 1
-  completed_phases: 1
+  total_phases: 5
+  completed_phases: 0
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -27,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 
 ## Current Position
 
-Phase: 01 (target-extraction-contract) — READY TO EXECUTE (gap closure)
-Plan: 5 of 8 (3 gap-closure plans pending)
-Status: 5 plans executed; verification found 2 gaps; gap-closure plans 01-06..01-08 planned and ready to execute
-Last activity: 2026-07-20 — Planned gap-closure (provenance completeness + width-ordering fix)
+Phase: 01 (target-extraction-contract) — EXECUTING
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-07-20
 
-Progress: [██████░░░░] 62%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -63,6 +61,7 @@ Progress: [██████░░░░] 62%
 | Phase 01-target-extraction-contract P03 | 7 min | 2 tasks | 4 files |
 | Phase 01-target-extraction-contract P04 | 4 min | 2 tasks | 5 files |
 | Phase 01-target-extraction-contract P05 | 6 min | 2 tasks | 2 files |
+| Phase 01 P06 | 7 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +86,9 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Post-fix width-ordering FLAGS are reported without changing any locked extraction constant.
 - [Phase 01-target-extraction-contract]: Continuity tracking selects the nearest non-clipped candidate while fresh, then falls back to largest-run selection after ten invalid columns. — Resolves multi-blob ambiguity without per-track tuning and prevents stale anchors from capturing long-gap resumptions.
 - [Phase 01-target-extraction-contract]: Three-point smoothing windows use degree finite_count minus two. — Retains at least one residual degree of freedom so sparse windows genuinely damp noise.
+- [Phase 01-target-extraction-contract]: The width-ordering regression is caused by DETREND_POLY_ORDER=4, not continuity tracking — verdict flips PASS to FLAG exactly at order=4 under both continuity settings.
+- [Phase 01-target-extraction-contract]: Continuity tracking has a real, uniform, order-independent effect that shrinks track 21's magnitude 3-4x, but never by itself flips the ordering verdict.
+- [Phase 01-target-extraction-contract]: Pre-registered the fix-selection criterion (residual structure / physical plausibility — the detrend background must not follow the bead) before any fix is chosen or applied, naming bead-masking as the endorsed remedy.
 
 ### Pending Todos
 
@@ -109,6 +111,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-20T05:37:00.324Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-07-20T21:23:20.074Z
+Stopped at: Completed 01-06-PLAN.md
 Resume file: None
