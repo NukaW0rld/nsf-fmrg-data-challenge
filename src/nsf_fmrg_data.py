@@ -202,16 +202,32 @@ def load_wyko_asc(height_dir, track_id, crop_to_common=True):
     }
 
 
-def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2):
+def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1):
     Zs = Z_mm[::stride_y, ::stride_x]
     xs = x_mm[::stride_x]
     ys = y_mm[::stride_y]
     Xs, Ys = np.meshgrid(xs, ys)
     z = Zs.ravel()
-    A = np.c_[Xs.ravel(), Ys.ravel(), np.ones(Xs.size)]
     valid = np.isfinite(z)
     if valid.sum() < 100:
         return Z_mm.copy(), None
+
+    if not isinstance(order, (int, np.integer)) or order < 0:
+        raise ValueError('order must be a non-negative integer.')
+    exponents = [
+        (i, degree - i)
+        for degree in range(order + 1)
+        for i in range(degree + 1)
+    ]
+    x_center = 0.5 * (x_mm[0] + x_mm[-1])
+    y_center = 0.5 * (y_mm[0] + y_mm[-1])
+    Xs_centered = Xs - x_center
+    Ys_centered = Ys - y_center
+    A = np.column_stack([
+        Xs_centered.ravel() ** i * Ys_centered.ravel() ** j
+        for i, j in exponents
+    ])
+
     keep = valid.copy()
     coef = None
     for _ in range(3):
@@ -223,7 +239,12 @@ def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2):
         if keep_new.sum() < 100:
             break
         keep = keep_new
-    plane = coef[0] * x_mm[None, :] + coef[1] * y_mm[:, None] + coef[2]
+    x_full = x_mm[None, :] - x_center
+    y_full = y_mm[:, None] - y_center
+    plane = sum(
+        coefficient * x_full**i * y_full**j
+        for coefficient, (i, j) in zip(coef, exponents)
+    )
     return Z_mm - plane, coef
 
 

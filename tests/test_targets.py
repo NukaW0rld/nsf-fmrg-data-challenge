@@ -194,6 +194,7 @@ def test_extraction_params_provenance():
         "SG_POLYORDER": 2,
         "MIN_VALID_Y_POINTS": 50,
         "MIN_COLUMNS_PER_BIN": 10,
+        "DETREND_POLY_ORDER": 4,
     }
 
     require(targets.extraction_params() == expected, "the exact 12-value extraction parameterization changed")

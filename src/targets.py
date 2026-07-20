@@ -16,6 +16,8 @@ SG_WINDOW_PTS = 5
 SG_POLYORDER = 2
 MIN_VALID_Y_POINTS = 50
 MIN_COLUMNS_PER_BIN = 10
+# Amendment A3: fixed a priori from the debug session's per-track R^2 evidence.
+DETREND_POLY_ORDER = 4
 
 TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
 TRACK_IDS = tuple(TRACK_POWER_W)
@@ -39,6 +41,7 @@ def extraction_params():
         'SG_POLYORDER': SG_POLYORDER,
         'MIN_VALID_Y_POINTS': MIN_VALID_Y_POINTS,
         'MIN_COLUMNS_PER_BIN': MIN_COLUMNS_PER_BIN,
+        'DETREND_POLY_ORDER': DETREND_POLY_ORDER,
     }
 
 
@@ -217,7 +220,12 @@ def extract_track_targets(height_dir, track_id):
     if 'pixel_size_mm' not in data['header']:
         raise ValueError(f'{expected_name} header is missing pixel_size_mm.')
 
-    Zd, coef = robust_plane_detrend(data['Z_mm'], data['x_actual_mm'], data['y_mm'])
+    Zd, coef = robust_plane_detrend(
+        data['Z_mm'],
+        data['x_actual_mm'],
+        data['y_mm'],
+        order=DETREND_POLY_ORDER,
+    )
     if coef is None:
         raise ValueError(f'Plane detrending failed for {expected_name}.')
 

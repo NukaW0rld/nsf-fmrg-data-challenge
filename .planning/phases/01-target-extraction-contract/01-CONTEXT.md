@@ -37,6 +37,12 @@ Define and implement the height-map → local-width extraction method `w_i(x) = 
 - **D-15:** Detrending happens once per full (cropped) track, before edge detection runs — not per-column or per-local-window. Keeps detrending and edge-detection as separate, independently testable steps.
 - **D-16:** Keep `robust_plane_detrend()`'s existing default stride (`stride_x=40, stride_y=2`) unchanged. Don't symmetrize preemptively; revisit only if the D-14 residual-curvature QA check surfaces an actual problem.
 
+### Amendment A3 (post-UAT escalation — plan 01-04)
+
+Amendment A3 supersedes D-13's and D-16's instruction to keep `robust_plane_detrend()` as-is now that D-14's mandatory residual QA check surfaced exactly the anticipated bow in UAT Test 1 (`.planning/debug/residual-curvature-after-detrend.md`). `robust_plane_detrend()` gains a configurable bivariate-polynomial `order` parameter whose default remains `order=1`, preserving the original three-term affine fit for every other caller, including the notebooks. `src/targets.py` locks `DETREND_POLY_ORDER = 4` and applies it identically to all four tracks. The three-pass percentile-trim scheme and existing `stride_x=40, stride_y=2` sampling remain unchanged because the root-cause investigation implicated model order, not sampling density.
+
+The order was fixed from measured evidence before any new QA figure was generated: quadratic fits explained 97.7% and 96.3% of the post-linear-detrend residual variance for tracks 8 and 14, but only 46.9% and 29.5% for tracks 10 and 21; quartic fits raised track 10 to 64.0% and track 21 to 44.9%. Track 21's more demanding alternating-lobe case therefore set the shared order to 4 a priori. Any residual unexplained by that shared quartic surface is treated as genuine local width/process variation rather than chased with per-track special-casing, which would violate TARGET-02's one-shared-parameterization constraint.
+
 ### Claude's Discretion
 - Exact noise-floor value used for the D-04 minimum peak-baseline separation threshold (should be grounded in the profilometer's stated vertical resolution/noise characteristics, determined during implementation/research).
 - Precise scipy `savgol_filter` boundary-mode parameter choice satisfying D-12 (e.g. `mode='interp'` vs `'nearest'`) — pick during implementation, verify visually per D-12.
