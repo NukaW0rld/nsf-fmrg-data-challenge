@@ -138,6 +138,22 @@ def nan_savgol(v):
     return out
 
 
+def finalize_smoothed_boundaries(y_lower_raw, y_upper_raw):
+    y_lower = nan_savgol(y_lower_raw)
+    y_upper = nan_savgol(y_upper_raw)
+    valid_mask = np.isfinite(y_lower) & np.isfinite(y_upper) & (y_upper > y_lower)
+
+    y_lower = y_lower.copy()
+    y_upper = y_upper.copy()
+    y_lower[~valid_mask] = np.nan
+    y_upper[~valid_mask] = np.nan
+    w_mm = y_upper - y_lower
+
+    if valid_mask.sum() == 0:
+        raise ValueError('Target extraction produced zero valid x-positions.')
+    return y_lower, y_upper, w_mm, valid_mask
+
+
 def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
     x_grid = target_grid()
     y_upper_raw = np.full(TARGET_GRID_N, np.nan, dtype=np.float64)
@@ -155,14 +171,10 @@ def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
             continue
         y_lower_raw[i], y_upper_raw[i] = edges
 
-    y_upper = nan_savgol(y_upper_raw)
-    y_lower = nan_savgol(y_lower_raw)
-    assert np.array_equal(np.isfinite(y_upper), np.isfinite(y_upper_raw))
-    assert np.array_equal(np.isfinite(y_lower), np.isfinite(y_lower_raw))
-    w_mm = y_upper - y_lower
-    valid_mask = np.isfinite(w_mm)
-    if valid_mask.sum() == 0:
-        raise ValueError('Target extraction produced zero valid x-positions.')
+    y_lower, y_upper, w_mm, valid_mask = finalize_smoothed_boundaries(
+        y_lower_raw,
+        y_upper_raw,
+    )
 
     return {
         'x_grid_mm': x_grid,
