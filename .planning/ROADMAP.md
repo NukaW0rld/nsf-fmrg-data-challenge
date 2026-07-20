@@ -75,7 +75,7 @@ Plans:
 
 **Wave 8** *(gap closure, blocked on Wave 7 completion)*
 
-- [ ] 01-08-PLAN.md — Gap 2 outcome: atomically regenerate 4 NPZs + 12 QA PNGs + params/manifest, re-run `check_targets.py`, and report the 8>10>14>21 ordering honestly (escalate, never tune, if not restored)
+- [x] 01-08-PLAN.md — Gap 2 outcome: atomically regenerate 4 NPZs + 12 QA PNGs + params/manifest, re-run `check_targets.py`, and report the 8>10>14>21 ordering honestly (escalate, never tune, if not restored)
 
 ### Phase 2: Dataset Alignment & Sample Construction
 

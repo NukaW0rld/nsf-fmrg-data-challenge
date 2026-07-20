@@ -2,17 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Completed 01-07-PLAN.md
-last_updated: "2026-07-20T21:32:36.294Z"
+stopped_at: Completed 01-08-PLAN.md
+last_updated: "2026-07-20T21:38:35.587Z"
 last_activity: 2026-07-20
 progress:
-  total_phases: 1
-  completed_phases: 0
+  total_phases: 5
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -27,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-07-20
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,6 +63,7 @@ Progress: [█████████░] 88%
 | Phase 01-target-extraction-contract P05 | 6 min | 2 tasks | 2 files |
 | Phase 01 P06 | 7 min | 2 tasks | 2 files |
 | Phase 01 P07 | 10 min | 3 tasks | 5 files |
+| Phase 01 P08 | 8min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -92,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Continuity tracking has a real, uniform, order-independent effect that shrinks track 21's magnitude 3-4x, but never by itself flips the ordering verdict.
 - [Phase 01-target-extraction-contract]: Pre-registered the fix-selection criterion (residual structure / physical plausibility — the detrend background must not follow the bead) before any fix is chosen or applied, naming bead-masking as the endorsed remedy.
 - [Phase 01-target-extraction-contract]: Implemented the plan-06 endorsed bead-region masking of the detrend surface fit (BEAD_MASK_HEIGHT_FRACTION fixed at the already-locked HALF_MAX_FRACTION), completed extraction_params() provenance (MAX_TRACKING_GAP_COLUMNS, BEAD_MASK_HEIGHT_FRACTION, 15 keys), and canonicalized both as Amendment A4.
+- [Phase ?]: The 8>10>14>21 width ordering is NOT restored under Amendment A4's corrected extraction (10-vs-14 FLAGs); no extraction parameter was changed, and the outcome is escalated for a separate human-override decision rather than tuned.
+- [Phase ?]: Track 10's valid-bin fraction collapsed to 5.2% (21/400) under the bead-mask fix, down from ~43.8% previously — reported as material context for the human decision, not diagnosed/fixed in this plan.
 
 ### Pending Todos
 
@@ -103,6 +105,7 @@ None yet.
 - [Phase 2]: Track 21's laser on/off thermal-detection heuristic is flagged (research/PITFALLS.md, Pitfall 9) as a plausible, unconfirmed misalignment risk — requires explicit numeric/visual cross-check during Phase 2, since track 21 is also the primary held-out evaluation track.
 - [Phase 3]: The LOTO harness must be validated leak-free with a dummy predictor before Phase 4 model training starts — this is a hard, non-negotiable gate per research/ARCHITECTURE.md.
 - Restricted raw data is already present in historical commit 831987c; remediate repository history before any external sharing.
+- [Phase 1]: 8>10>14>21 width ordering not restored (10-vs-14 FLAG) after Amendment A4 regeneration — Phase 1 verification sign-off is blocked pending a human decision between overriding the ordering criterion or diagnosing track 10's valid-fraction collapse as a new defect (see 01-08-ORDERING-OUTCOME.md).
 
 ## Deferred Items
 
@@ -114,6 +117,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-20T21:32:36.289Z
-Stopped at: Completed 01-07-PLAN.md
+Last session: 2026-07-20T21:38:35.578Z
+Stopped at: Completed 01-08-PLAN.md
 Resume file: None
