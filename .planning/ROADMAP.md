@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 5/5 plans executed
+**Plans:** 8 plans (5 executed; 3 gap-closure plans pending — 01-06…01-08)
 
 Plans:
 **Wave 1**
@@ -64,6 +64,18 @@ Plans:
 **Wave 5** *(gap closure, blocked on Wave 4 completion)*
 
 - [x] 01-05-PLAN.md — G-01-2/G-01-3: cross-column continuity tracking in `halfmax_edges` and a degenerate-window fix in `nan_savgol`, regenerate real 4-track boundary/width QA
+
+**Wave 6** *(gap closure, blocked on Wave 5 completion)*
+
+- [ ] 01-06-PLAN.md — Gap 2 diagnostic: uniform detrend-order {1,2,4} × continuity on/off sweep on all 4 tracks; isolate the width-collapse root cause and pre-register an outcome-independent fix-selection criterion
+
+**Wave 7** *(gap closure, blocked on Wave 6 completion)*
+
+- [ ] 01-07-PLAN.md — Gap 2 + Gap 1: apply ONE uniform track-independent fix (bead-mask before detrend), complete `extraction_params()` (MAX_TRACKING_GAP_COLUMNS + fix param) with change-sensitive provenance, and record Amendment A4
+
+**Wave 8** *(gap closure, blocked on Wave 7 completion)*
+
+- [ ] 01-08-PLAN.md — Gap 2 outcome: atomically regenerate 4 NPZs + 12 QA PNGs + params/manifest, re-run `check_targets.py`, and report the 8>10>14>21 ordering honestly (escalate, never tune, if not restored)
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
