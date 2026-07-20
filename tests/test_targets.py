@@ -96,6 +96,120 @@ def test_boundary_clipped_runs_are_invalid():
     require(targets.halfmax_edges(trailing, y_mm) is None, "trailing clipped runs must be invalid")
 
 
+def test_all_true_runs_finds_every_contiguous_block():
+    mask = np.zeros(24, dtype=bool)
+    mask[1:4] = True
+    mask[7:13] = True
+    mask[18:20] = True
+
+    runs = targets.all_true_runs(mask)
+    require(runs == [(1, 4), (7, 13), (18, 20)], "all contiguous runs must be returned in order")
+    require(
+        max(runs, key=lambda run: run[1] - run[0]) == nsf_fmrg_data.largest_true_run(mask),
+        "the longest enumerated run must match largest_true_run",
+    )
+
+
+def _two_blob_profile():
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    prof = np.zeros(480, dtype=np.float64)
+    prof[90:140] = 0.02
+    prof[250:330] = 0.02
+    return prof, y_mm
+
+
+def test_halfmax_edges_prefers_largest_run_without_previous_center():
+    prof, y_mm = _two_blob_profile()
+    edges = targets.halfmax_edges(prof, y_mm, previous_center=None)
+
+    require(edges is not None, "a two-blob profile must produce tracked edges")
+    require(np.isclose(np.mean(edges), 0.5 * (y_mm[249] + y_mm[330])), "untracked selection must use the larger run")
+
+
+def test_halfmax_edges_tracks_nearest_run_to_previous_center():
+    prof, y_mm = _two_blob_profile()
+    previous_center = 0.5 * (y_mm[89] + y_mm[140])
+    edges = targets.halfmax_edges(prof, y_mm, previous_center=previous_center)
+
+    require(edges is not None, "a tracked two-blob profile must produce edges")
+    require(np.isclose(np.mean(edges), previous_center), "tracking history must select the nearer smaller run")
+
+
+def test_halfmax_edges_excludes_clipped_runs_from_tracking_candidates():
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    prof = np.zeros(480, dtype=np.float64)
+    prof[:80] = 0.02
+    prof[240:300] = 0.02
+    edges = targets.halfmax_edges(prof, y_mm, previous_center=y_mm[20])
+
+    require(edges is not None, "an unclipped alternative must remain selectable")
+    require(np.mean(edges) > y_mm[200], "tracking must never select the nearer boundary-clipped run")
+
+
+def _binned_synthetic_profiles(profile_by_bin):
+    bin_count = max(profile_by_bin) + 1
+    x_actual_mm = 20.0 + 0.004 * np.arange(50 * bin_count, dtype=np.float64)
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    Zd = np.zeros((len(y_mm), len(x_actual_mm)), dtype=np.float64)
+    for bin_index, profile in profile_by_bin.items():
+        Zd[:, 50 * bin_index:50 * (bin_index + 1)] = profile[:, None]
+    return Zd, x_actual_mm, y_mm
+
+
+def test_extract_targets_from_arrays_boundary_tracking_survives_decoy_blob():
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    bead = np.zeros(480, dtype=np.float64)
+    bead[100:170] = 0.02
+    competing = bead.copy()
+    competing[270:360] = 0.02
+    profiles = {index: bead.copy() for index in range(7)}
+    profiles[3] = competing
+    Zd, x_actual_mm, y_mm = _binned_synthetic_profiles(profiles)
+
+    untracked = targets.halfmax_edges(competing, y_mm, previous_center=None)
+    require(untracked is not None and np.mean(untracked) > 1.0, "test decoy must reproduce the old largest-run selection")
+
+    result = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+    neighbor_center = np.nanmean([
+        np.mean([result["y_lower_mm"][2], result["y_upper_mm"][2]]),
+        np.mean([result["y_lower_mm"][4], result["y_upper_mm"][4]]),
+    ])
+    tracked_center = np.mean([result["y_lower_mm"][3], result["y_upper_mm"][3]])
+    require(abs(tracked_center - neighbor_center) < 0.05, "the full pipeline must stay on the continuous bead through a decoy bin")
+
+
+def test_halfmax_edges_resets_stale_history_after_long_invalid_gap():
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    anchor = np.zeros(480, dtype=np.float64)
+    anchor[80:140] = 0.02
+    resumed = np.zeros(480, dtype=np.float64)
+    resumed[290:380] = 0.02
+    resumed_with_decoy = resumed.copy()
+    resumed_with_decoy[85:135] = 0.02
+    gap_profile = np.zeros(480, dtype=np.float64)
+
+    base_profiles = {0: anchor}
+    base_profiles.update({index: gap_profile for index in range(1, targets.MAX_TRACKING_GAP_COLUMNS + 1)})
+    base_profiles[targets.MAX_TRACKING_GAP_COLUMNS + 1] = resumed
+    Zd, x_actual_mm, y_mm = _binned_synthetic_profiles(base_profiles)
+    no_decoy = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+    resume_index = targets.MAX_TRACKING_GAP_COLUMNS + 1
+    require(
+        np.mean([no_decoy["y_lower_mm"][resume_index], no_decoy["y_upper_mm"][resume_index]]) > 1.0,
+        "the drifted bead must remain detectable after a long gap",
+    )
+
+    stale_center = 0.5 * (y_mm[79] + y_mm[140])
+    stale_edges = targets.halfmax_edges(resumed_with_decoy, y_mm, previous_center=stale_center)
+    require(stale_edges is not None and np.mean(stale_edges) < 1.0, "a stale anchor alone must prefer the planted decoy")
+
+    base_profiles[resume_index] = resumed_with_decoy
+    Zd, x_actual_mm, y_mm = _binned_synthetic_profiles(base_profiles)
+    tracked = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+    resumed_center = np.mean([tracked["y_lower_mm"][resume_index], tracked["y_upper_mm"][resume_index]])
+    require(resumed_center > 1.0, "stale history must reset so the largest drifted bead wins after the long gap")
+
+
 def test_nan_savgol_preserves_mask():
     values = np.linspace(-1.0, 1.0, 21) ** 2
     values[[2, 8, 9, 17]] = np.nan
@@ -285,6 +399,12 @@ if __name__ == "__main__":
         test_halfmax_edges_for_rectangular_bump,
         test_noise_floor_exact_boundary_is_valid,
         test_boundary_clipped_runs_are_invalid,
+        test_all_true_runs_finds_every_contiguous_block,
+        test_halfmax_edges_prefers_largest_run_without_previous_center,
+        test_halfmax_edges_tracks_nearest_run_to_previous_center,
+        test_halfmax_edges_excludes_clipped_runs_from_tracking_candidates,
+        test_extract_targets_from_arrays_boundary_tracking_survives_decoy_blob,
+        test_halfmax_edges_resets_stale_history_after_long_invalid_gap,
         test_nan_savgol_preserves_mask,
         test_nan_savgol_preserves_quadratic_at_crop_edges,
         test_nan_savgol_blends_across_masked_gaps,
