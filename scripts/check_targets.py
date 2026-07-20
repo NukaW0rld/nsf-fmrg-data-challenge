@@ -21,28 +21,33 @@ EXPECTED_SHAPE = (400,)
 Y_STRIP_EXTENT_MM = 1.907
 
 
+def require(condition, message):
+    if not bool(condition):
+        raise ValueError(message)
+
+
 def check_track(targets_dir: Path, track_id: int) -> dict:
     target_path = targets_dir / f"track_{track_id}_targets.npz"
-    assert target_path.exists(), f"Track {track_id}: missing artifact {target_path}."
+    require(target_path.exists(), f"Track {track_id}: missing artifact {target_path}.")
 
     with np.load(target_path) as artifact:
-        assert set(artifact.files) == EXPECTED_KEYS, (
+        require(set(artifact.files) == EXPECTED_KEYS, (
             f"Track {track_id}: expected keys {sorted(EXPECTED_KEYS)}, got {sorted(artifact.files)}."
-        )
+        ))
         for key in FLOAT_KEYS:
-            assert artifact[key].dtype == np.dtype(np.float64), (
+            require(artifact[key].dtype == np.dtype(np.float64), (
                 f"Track {track_id}: {key} must be float64, got {artifact[key].dtype}."
-            )
-            assert artifact[key].shape == EXPECTED_SHAPE, (
+            ))
+            require(artifact[key].shape == EXPECTED_SHAPE, (
                 f"Track {track_id}: {key} must have shape {EXPECTED_SHAPE}, got {artifact[key].shape}."
-            )
-        assert artifact["valid_mask"].dtype == np.dtype(bool), (
+            ))
+        require(artifact["valid_mask"].dtype == np.dtype(bool), (
             f'Track {track_id}: valid_mask must be bool, got {artifact["valid_mask"].dtype}.'
-        )
-        assert artifact["valid_mask"].shape == EXPECTED_SHAPE, (
+        ))
+        require(artifact["valid_mask"].shape == EXPECTED_SHAPE, (
             f'Track {track_id}: valid_mask must have shape {EXPECTED_SHAPE}, '
             f'got {artifact["valid_mask"].shape}.'
-        )
+        ))
 
         x_grid_mm = artifact["x_grid_mm"]
         w_mm = artifact["w_mm"]
@@ -50,35 +55,35 @@ def check_track(targets_dir: Path, track_id: int) -> dict:
         y_lower_mm = artifact["y_lower_mm"]
         valid_mask = artifact["valid_mask"]
 
-        assert np.isclose(x_grid_mm[0], 20.1), (
+        require(np.isclose(x_grid_mm[0], 20.1), (
             f"Track {track_id}: first grid slot must be 20.1 mm, got {x_grid_mm[0]}."
-        )
-        assert np.allclose(np.diff(x_grid_mm), 0.2), f"Track {track_id}: grid step is not uniformly 0.2 mm."
-        assert np.allclose(x_grid_mm, target_grid()), (
+        ))
+        require(np.allclose(np.diff(x_grid_mm), 0.2), f"Track {track_id}: grid step is not uniformly 0.2 mm.")
+        require(np.allclose(x_grid_mm, target_grid()), (
             f"Track {track_id}: persisted grid differs from targets.target_grid()."
-        )
-        assert np.array_equal(np.isfinite(w_mm), valid_mask), (
+        ))
+        require(np.array_equal(np.isfinite(w_mm), valid_mask), (
             f"Track {track_id}: finite width slots do not equal valid_mask."
-        )
-        assert np.array_equal(np.isfinite(y_upper_mm), valid_mask), (
+        ))
+        require(np.array_equal(np.isfinite(y_upper_mm), valid_mask), (
             f"Track {track_id}: finite upper-boundary slots do not equal valid_mask."
-        )
-        assert np.array_equal(np.isfinite(y_lower_mm), valid_mask), (
+        ))
+        require(np.array_equal(np.isfinite(y_lower_mm), valid_mask), (
             f"Track {track_id}: finite lower-boundary slots do not equal valid_mask."
-        )
-        assert np.allclose(w_mm[valid_mask], y_upper_mm[valid_mask] - y_lower_mm[valid_mask]), (
+        ))
+        require(np.allclose(w_mm[valid_mask], y_upper_mm[valid_mask] - y_lower_mm[valid_mask]), (
             f"Track {track_id}: width does not equal upper minus lower boundary."
-        )
-        assert np.all(y_upper_mm[valid_mask] > y_lower_mm[valid_mask]), (
+        ))
+        require(np.all(y_upper_mm[valid_mask] > y_lower_mm[valid_mask]), (
             f"Track {track_id}: crossed or degenerate boundaries survived in valid slots."
-        )
-        assert np.all(w_mm[valid_mask] > 0.0), f"Track {track_id}: valid widths must be positive."
-        assert np.all(w_mm[valid_mask] < Y_STRIP_EXTENT_MM), (
+        ))
+        require(np.all(w_mm[valid_mask] > 0.0), f"Track {track_id}: valid widths must be positive.")
+        require(np.all(w_mm[valid_mask] < Y_STRIP_EXTENT_MM), (
             f"Track {track_id}: valid width exceeds the {Y_STRIP_EXTENT_MM} mm y-strip extent."
-        )
+        ))
 
         valid_count = int(valid_mask.sum())
-        assert valid_count > 0, f"Track {track_id}: all-invalid artifacts are prohibited."
+        require(valid_count > 0, f"Track {track_id}: all-invalid artifacts are prohibited.")
         valid_fraction = valid_count / len(valid_mask)
         if valid_fraction < 0.5:
             print(f"Track {track_id} valid fraction {valid_fraction:.1%} is below 50% — FLAG")
@@ -119,12 +124,12 @@ def main():
     targets_dir = args.project_dir.resolve() / "processed_data" / "targets"
 
     params_path = targets_dir / "extraction_params.json"
-    assert params_path.exists(), f"Missing extraction provenance {params_path}."
+    require(params_path.exists(), f"Missing extraction provenance {params_path}.")
     with params_path.open(encoding="utf-8") as stream:
         persisted_params = json.load(stream)
-    assert persisted_params == extraction_params(), (
+    require(persisted_params == extraction_params(), (
         "Persisted extraction_params.json does not match the locked code constants."
-    )
+    ))
 
     summaries = [check_track(targets_dir, track_id) for track_id in TRACK_IDS]
     print_results(summaries)
