@@ -14,6 +14,11 @@ import nsf_fmrg_data
 import targets
 
 
+def require(condition, message):
+    if not condition:
+        raise AssertionError(message)
+
+
 def test_target_grid_matches_thermal_centers():
     grid = targets.target_grid()
     stop_idx = nsf_fmrg_data.EXTRACTED_THERMAL_FRAMES
@@ -22,11 +27,11 @@ def test_target_grid_matches_thermal_centers():
         (stop_idx - indices) - 0.5
     ) * nsf_fmrg_data.THERMAL_MM_PER_FRAME
 
-    assert grid.shape == (400,)
-    assert np.isclose(grid[0], 20.1)
-    assert np.isclose(grid[-1], 99.9)
-    assert np.allclose(np.diff(grid), 0.2)
-    assert np.allclose(grid, np.sort(thermal_centers))
+    require(grid.shape == (400,), "target grid must contain 400 slots")
+    require(np.isclose(grid[0], 20.1), "target grid must start at 20.1 mm")
+    require(np.isclose(grid[-1], 99.9), "target grid must end at 99.9 mm")
+    require(np.allclose(np.diff(grid), 0.2), "target grid spacing must be 0.2 mm")
+    require(np.allclose(grid, np.sort(thermal_centers)), "target grid must match thermal centers")
 
 
 def test_gap_rule_exact_boundary_and_no_extrapolation():
@@ -35,25 +40,25 @@ def test_gap_rule_exact_boundary_and_no_extrapolation():
     interior_ten = base.copy()
     interior_ten[200:210] = np.nan
     filled, ok = targets.fill_small_gaps(interior_ten)
-    assert ok
-    assert np.isfinite(filled).all()
+    require(ok, "an interior gap of exactly ten pixels must be accepted")
+    require(np.isfinite(filled).all(), "an accepted interior gap must be filled")
 
     interior_eleven = base.copy()
     interior_eleven[200:211] = np.nan
     _, ok = targets.fill_small_gaps(interior_eleven)
-    assert not ok
+    require(not ok, "an interior gap of eleven pixels must be rejected")
 
     leading_eight = base.copy()
     leading_eight[:8] = np.nan
     filled, ok = targets.fill_small_gaps(leading_eight)
-    assert ok
-    assert np.isnan(filled[:8]).all()
-    assert np.isfinite(filled[8:]).all()
+    require(ok, "a leading gap within the limit must preserve the profile")
+    require(np.isnan(filled[:8]).all(), "leading gaps must not be extrapolated")
+    require(np.isfinite(filled[8:]).all(), "finite values after a leading gap must be preserved")
 
     leading_eleven = base.copy()
     leading_eleven[:11] = np.nan
     _, ok = targets.fill_small_gaps(leading_eleven)
-    assert not ok
+    require(not ok, "a leading gap of eleven pixels must be rejected")
 
 
 def test_halfmax_edges_for_rectangular_bump():
@@ -62,13 +67,13 @@ def test_halfmax_edges_for_rectangular_bump():
     prof[160:320] = 0.02
     edges = targets.halfmax_edges(prof, y_mm)
 
-    assert edges is not None
+    require(edges is not None, "a rectangular bump must produce two edges")
     y_lower, y_upper = edges
     expected_lower = 0.5 * (y_mm[159] + y_mm[160])
     expected_upper = 0.5 * (y_mm[319] + y_mm[320])
-    assert abs(y_lower - expected_lower) <= np.diff(y_mm).max()
-    assert abs(y_upper - expected_upper) <= np.diff(y_mm).max()
-    assert y_upper > y_lower
+    require(abs(y_lower - expected_lower) <= np.diff(y_mm).max(), "lower edge must be interpolated within one sample")
+    require(abs(y_upper - expected_upper) <= np.diff(y_mm).max(), "upper edge must be interpolated within one sample")
+    require(y_upper > y_lower, "upper edge must be strictly above lower edge")
 
 
 def test_noise_floor_exact_boundary_is_valid():
@@ -76,8 +81,8 @@ def test_noise_floor_exact_boundary_is_valid():
     prof = np.zeros(480, dtype=np.float64)
     prof[160:320] = targets.MIN_PEAK_BASELINE_SEPARATION_MM
 
-    assert targets.halfmax_edges(prof, y_mm) is not None
-    assert targets.halfmax_edges(0.8 * prof, y_mm) is None
+    require(targets.halfmax_edges(prof, y_mm) is not None, "exact noise-floor separation must be valid")
+    require(targets.halfmax_edges(0.8 * prof, y_mm) is None, "sub-threshold separation must be invalid")
 
 
 def test_boundary_clipped_runs_are_invalid():
@@ -87,8 +92,8 @@ def test_boundary_clipped_runs_are_invalid():
     leading[:120] = 0.02
     trailing[-120:] = 0.02
 
-    assert targets.halfmax_edges(leading, y_mm) is None
-    assert targets.halfmax_edges(trailing, y_mm) is None
+    require(targets.halfmax_edges(leading, y_mm) is None, "leading clipped runs must be invalid")
+    require(targets.halfmax_edges(trailing, y_mm) is None, "trailing clipped runs must be invalid")
 
 
 def test_nan_savgol_preserves_mask():
@@ -96,7 +101,7 @@ def test_nan_savgol_preserves_mask():
     values[[2, 8, 9, 17]] = np.nan
     smoothed = targets.nan_savgol(values)
 
-    assert np.array_equal(np.isfinite(smoothed), np.isfinite(values))
+    require(np.array_equal(np.isfinite(smoothed), np.isfinite(values)), "smoothing must preserve the finite mask")
 
 
 def test_nan_savgol_preserves_quadratic_at_crop_edges():
@@ -104,8 +109,11 @@ def test_nan_savgol_preserves_quadratic_at_crop_edges():
     values = 0.3 * x**2 - 2.0 * x + 5.0
     smoothed = targets.nan_savgol(values)
 
-    assert np.allclose(smoothed, values, atol=1e-10)
-    assert np.allclose(smoothed[[0, 1, -2, -1]], values[[0, 1, -2, -1]], atol=1e-10)
+    require(np.allclose(smoothed, values, atol=1e-10), "quadratic data must survive smoothing")
+    require(
+        np.allclose(smoothed[[0, 1, -2, -1]], values[[0, 1, -2, -1]], atol=1e-10),
+        "crop-edge quadratic values must be preserved",
+    )
 
 
 def test_nan_savgol_blends_across_masked_gaps():
@@ -115,9 +123,9 @@ def test_nan_savgol_blends_across_masked_gaps():
     values[[4, 6]] = np.nan
     smoothed = targets.nan_savgol(values)
 
-    assert np.isclose(smoothed[5], expected[5], atol=1e-10)
-    assert np.isclose(smoothed[3], expected[3], atol=1e-10)
-    assert np.isclose(smoothed[7], expected[7], atol=1e-10)
+    require(np.isclose(smoothed[5], expected[5], atol=1e-10), "center fit may blend across masked neighbors")
+    require(np.isclose(smoothed[3], expected[3], atol=1e-10), "left fit may blend across a masked neighbor")
+    require(np.isclose(smoothed[7], expected[7], atol=1e-10), "right fit may blend across a masked neighbor")
 
 
 def test_single_parameterization_has_no_track_conditionals():
@@ -126,7 +134,7 @@ def test_single_parameterization_has_no_track_conditionals():
         r"\bif\s+track_id\b|\btrack_id\s*(?:==|!=|<=|>=|<|>|\bin\b)"
     )
 
-    assert track_conditional.search(source) is None
+    require(track_conditional.search(source) is None, "target extraction must not branch on track id")
 
 
 def test_extraction_params_provenance():
@@ -145,7 +153,40 @@ def test_extraction_params_provenance():
         "MIN_COLUMNS_PER_BIN": 10,
     }
 
-    assert targets.extraction_params() == expected
+    require(targets.extraction_params() == expected, "the exact 12-value extraction parameterization changed")
+
+
+def test_post_smoothing_crossing_is_invalidated():
+    y_lower_raw = np.zeros(5, dtype=np.float64)
+    y_upper_raw = np.array([1.0, 0.1, 0.1, 0.1, 1.0], dtype=np.float64)
+
+    require(np.all(y_upper_raw > y_lower_raw), "the reproducer must begin with positive raw separation")
+    independently_smoothed = targets.nan_savgol(y_upper_raw) - targets.nan_savgol(y_lower_raw)
+    require(independently_smoothed[2] <= 0.0, "the current smoother must cross at the center")
+
+    y_lower, y_upper, width, valid_mask = targets.finalize_smoothed_boundaries(
+        y_lower_raw,
+        y_upper_raw,
+    )
+    require(not valid_mask[2], "a post-smoothing crossing must be invalid")
+    require(np.isnan(y_lower[2]), "an invalid lower boundary must be NaN")
+    require(np.isnan(y_upper[2]), "an invalid upper boundary must be NaN")
+    require(np.isnan(width[2]), "an invalid width must be NaN")
+    require(np.all(np.isfinite(y_lower[valid_mask])), "valid lower boundaries must be finite")
+    require(np.all(np.isfinite(y_upper[valid_mask])), "valid upper boundaries must be finite")
+    require(np.all(y_upper[valid_mask] > y_lower[valid_mask]), "valid boundaries must remain strictly ordered")
+
+
+def test_post_smoothing_zero_valid_raises_value_error():
+    y_lower_raw = np.zeros(5, dtype=np.float64)
+    y_upper_raw = np.zeros(5, dtype=np.float64)
+
+    try:
+        targets.finalize_smoothed_boundaries(y_lower_raw, y_upper_raw)
+    except ValueError as exc:
+        require("zero valid" in str(exc).lower(), "zero-valid error must identify the condition")
+    else:
+        raise AssertionError("Expected ValueError after post-smoothing revalidation removes every slot")
 
 
 def test_all_invalid_track_raises_value_error():
@@ -156,7 +197,7 @@ def test_all_invalid_track_raises_value_error():
     try:
         targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
     except ValueError as exc:
-        assert "zero valid" in str(exc).lower()
+        require("zero valid" in str(exc).lower(), "all-invalid extraction must identify the zero-valid condition")
     else:
         raise AssertionError("Expected ValueError for an all-invalid target track")
 
@@ -172,22 +213,25 @@ def test_synthetic_end_to_end_fixed_grid_and_width():
     grid = result["x_grid_mm"]
     coverage = (grid >= 20.1) & (grid < 28.0)
 
-    assert set(result) == {
+    require(set(result) == {
         "x_grid_mm",
         "w_mm",
         "y_upper_mm",
         "y_lower_mm",
         "valid_mask",
-    }
-    assert all(np.asarray(value).shape == (400,) for value in result.values())
-    assert np.array_equal(result["valid_mask"], coverage)
-    assert np.allclose(result["w_mm"][coverage], 0.6, atol=0.05)
-    assert np.array_equal(np.isfinite(result["w_mm"]), result["valid_mask"])
-    assert np.allclose(
-        result["w_mm"][coverage],
-        result["y_upper_mm"][coverage] - result["y_lower_mm"][coverage],
+    }, "extraction result keys changed")
+    require(all(np.asarray(value).shape == (400,) for value in result.values()), "every result array must retain the shared grid")
+    require(np.array_equal(result["valid_mask"], coverage), "valid mask must match synthetic x coverage")
+    require(np.allclose(result["w_mm"][coverage], 0.6, atol=0.05), "synthetic width must remain near 0.6 mm")
+    require(np.array_equal(np.isfinite(result["w_mm"]), result["valid_mask"]), "width finiteness must equal the mask")
+    require(
+        np.allclose(
+            result["w_mm"][coverage],
+            result["y_upper_mm"][coverage] - result["y_lower_mm"][coverage],
+        ),
+        "valid widths must equal upper minus lower",
     )
-    assert np.isnan(result["w_mm"][~coverage]).all()
+    require(np.isnan(result["w_mm"][~coverage]).all(), "invalid widths must be NaN")
 
 
 if __name__ == "__main__":
@@ -202,6 +246,8 @@ if __name__ == "__main__":
         test_nan_savgol_blends_across_masked_gaps,
         test_single_parameterization_has_no_track_conditionals,
         test_extraction_params_provenance,
+        test_post_smoothing_crossing_is_invalidated,
+        test_post_smoothing_zero_valid_raises_value_error,
         test_all_invalid_track_raises_value_error,
         test_synthetic_end_to_end_fixed_grid_and_width,
     ]
