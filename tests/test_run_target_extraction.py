@@ -36,7 +36,13 @@ def clean_stub(project_root, raw_dir, targets_dir, qa_dir, track_id):
     require(targets_dir == (project_root / "processed_data" / "targets").resolve(), "stub must receive canonical targets path")
     require(qa_dir == (targets_dir / "qa").resolve(), "stub must receive canonical QA path")
     (targets_dir / f"stub_{track_id}.txt").write_text("allowed output\n", encoding="utf-8")
-    return {"track_id": track_id}
+    return {
+        "track_id": track_id,
+        "laser_power_w": 400,
+        "valid_count": 1,
+        "median_width_mm": 1.0,
+        "mean_width_mm": 1.0,
+    }
 
 
 def test_repository_root_rejection_is_read_only():
@@ -129,7 +135,13 @@ def test_success_path_audits_raw_in_finally():
         finally:
             runner.snapshot_raw = original_snapshot
 
-        require(summaries == [{"track_id": 8}], "successful pipeline must return track summaries")
+        require(summaries == [{
+            "track_id": 8,
+            "laser_power_w": 400,
+            "valid_count": 1,
+            "median_width_mm": 1.0,
+            "mean_width_mm": 1.0,
+        }], "successful pipeline must return track summaries")
         require(len(calls) == 2, "successful pipeline must take before and finally snapshots")
         require((root / "processed_data" / "targets" / "stub_8.txt").is_file(), "allowed output must be written below targets")
 

@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import hashlib
 import json
 import sys
 
@@ -24,12 +25,78 @@ TARGET_GRID_STEP_MM = 0.2
 EDGE_QA_WIDTH_MM = 0.5
 
 
-def snapshot_raw(project_dir: Path) -> dict:
-    raw_dir = project_dir / "data" / "raw"
+def resolve_repository_root(project_dir: Path, repository_anchor: Path = REPO_ROOT) -> Path:
+    anchor = Path(repository_anchor).resolve(strict=True)
+    candidate = Path(project_dir).resolve(strict=True)
+    if candidate != anchor:
+        raise ValueError(f"Project directory must resolve to the canonical repository root {anchor}, got {candidate}.")
+
+    markers = (
+        candidate / "src" / "targets.py",
+        candidate / "scripts" / "run_target_extraction.py",
+    )
+    missing = [path.relative_to(candidate).as_posix() for path in markers if not path.is_file()]
+    if missing:
+        raise ValueError(f"Canonical repository markers are missing: {missing}.")
+    resolve_raw_dir(candidate)
+    return candidate
+
+
+def resolve_raw_dir(project_root: Path) -> Path:
+    root = Path(project_root).resolve(strict=True)
+    raw_dir = (root / "data" / "raw").resolve(strict=True)
+    if not raw_dir.is_dir():
+        raise ValueError(f"Resolved raw path is not a directory: {raw_dir}.")
+    if not raw_dir.is_relative_to(root) or raw_dir == root:
+        raise ValueError(f"Resolved data/raw path escapes the canonical repository: {raw_dir}.")
+    return raw_dir
+
+
+def resolve_output_path(path: Path, project_root: Path, raw_dir: Path) -> Path:
+    root = Path(project_root).resolve(strict=True)
+    protected_raw = Path(raw_dir).resolve(strict=True)
+    candidate = Path(path).resolve(strict=False)
+    if not candidate.is_relative_to(root):
+        raise ValueError(f"Output path escapes the canonical repository: {candidate}.")
+    if candidate == protected_raw or candidate.is_relative_to(protected_raw):
+        raise ValueError(f"Output path enters the protected raw tree: {candidate}.")
+    return candidate
+
+
+def snapshot_raw(raw_dir: Path) -> dict:
+    supplied = Path(raw_dir)
+    resolved_raw = supplied.resolve(strict=True)
+    if not supplied.is_absolute() or supplied != resolved_raw or not resolved_raw.is_dir():
+        raise ValueError(f"snapshot_raw requires the resolved raw directory, got {supplied}.")
+
+    snapshot = {}
+    for path in sorted(resolved_raw.rglob("*"), key=lambda item: item.relative_to(resolved_raw).as_posix()):
+        resolved_path = path.resolve(strict=True)
+        if not resolved_path.is_relative_to(resolved_raw):
+            raise ValueError(f"Raw-tree symlink escapes the protected directory: {path} -> {resolved_path}.")
+        if not path.is_file():
+            continue
+
+        before = path.stat()
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        after = path.stat()
+        if (before.st_mtime_ns, before.st_size) != (after.st_mtime_ns, after.st_size):
+            raise RuntimeError(f"Raw file changed while being snapshotted: {path}.")
+        relative = path.relative_to(resolved_raw).as_posix()
+        snapshot[relative] = (before.st_mtime_ns, before.st_size, digest.hexdigest())
+    return snapshot
+
+
+def raw_snapshot_diff(before: dict, after: dict) -> dict:
+    before_paths = set(before)
+    after_paths = set(after)
     return {
-        path.relative_to(project_dir): (path.stat().st_mtime_ns, path.stat().st_size)
-        for path in raw_dir.rglob("*")
-        if path.is_file()
+        "added": sorted(after_paths - before_paths),
+        "removed": sorted(before_paths - after_paths),
+        "changed": sorted(path for path in before_paths & after_paths if before[path] != after[path]),
     }
 
 
@@ -39,7 +106,7 @@ def shade_invalid_slots(ax, x_grid_mm, valid_mask):
         ax.axvspan(x_mm - half_step, x_mm + half_step, color="0.75", alpha=0.25, linewidth=0)
 
 
-def save_residual_map(result, qa_dir: Path, track_id: int):
+def save_residual_map(result, qa_dir: Path, project_root: Path, raw_dir: Path, track_id: int):
     Zd_mm = result["Zd_mm"]
     finite = np.isfinite(Zd_mm)
     if not finite.any():
@@ -69,11 +136,18 @@ def save_residual_map(result, qa_dir: Path, track_id: int):
     colorbar = fig.colorbar(image, ax=ax, fraction=0.025, pad=0.02)
     colorbar.set_label("detrended height (mm)")
     fig.tight_layout()
-    fig.savefig(qa_dir / f"track_{track_id}_residual_map.png", dpi=160)
-    plt.close(fig)
+    try:
+        output_path = resolve_output_path(
+            qa_dir / f"track_{track_id}_residual_map.png",
+            project_root,
+            raw_dir,
+        )
+        fig.savefig(output_path, dpi=160)
+    finally:
+        plt.close(fig)
 
 
-def save_overlay(result, qa_dir: Path, track_id: int):
+def save_overlay(result, qa_dir: Path, project_root: Path, raw_dir: Path, track_id: int):
     x_grid_mm = result["x_grid_mm"]
     valid_mask = result["valid_mask"]
     extent = [
@@ -110,11 +184,26 @@ def save_overlay(result, qa_dir: Path, track_id: int):
         colorbar.set_label(colorbar_label)
     axes[-1].set_xlabel("track position x (mm)")
     fig.tight_layout()
-    fig.savefig(qa_dir / f"track_{track_id}_overlay.png", dpi=160)
-    plt.close(fig)
+    try:
+        output_path = resolve_output_path(
+            qa_dir / f"track_{track_id}_overlay.png",
+            project_root,
+            raw_dir,
+        )
+        fig.savefig(output_path, dpi=160)
+    finally:
+        plt.close(fig)
 
 
-def save_width_curve(result, qa_dir: Path, track_id: int, median_width_mm: float, mean_width_mm: float):
+def save_width_curve(
+    result,
+    qa_dir: Path,
+    project_root: Path,
+    raw_dir: Path,
+    track_id: int,
+    median_width_mm: float,
+    mean_width_mm: float,
+):
     x_grid_mm = result["x_grid_mm"]
     valid_count = int(result["valid_mask"].sum())
 
@@ -135,22 +224,35 @@ def save_width_curve(result, qa_dir: Path, track_id: int, median_width_mm: float
     ax.set_ylabel("width (mm)")
     ax.grid(alpha=0.25)
     fig.tight_layout()
-    fig.savefig(qa_dir / f"track_{track_id}_width.png", dpi=160)
-    plt.close(fig)
+    try:
+        output_path = resolve_output_path(
+            qa_dir / f"track_{track_id}_width.png",
+            project_root,
+            raw_dir,
+        )
+        fig.savefig(output_path, dpi=160)
+    finally:
+        plt.close(fig)
 
 
-def run_track(project_dir: Path, track_id: int) -> dict:
-    height_dir = project_dir / "data" / "raw" / "height_maps"
+def run_track(
+    project_root: Path,
+    raw_dir: Path,
+    targets_dir: Path,
+    qa_dir: Path,
+    track_id: int,
+) -> dict:
+    height_dir = raw_dir / "height_maps"
     result = extract_track_targets(height_dir, track_id)
     print(f'Track {track_id} source: {result["file"]}')
 
-    targets_dir = project_dir / "processed_data" / "targets"
-    qa_dir = targets_dir / "qa"
-    targets_dir.mkdir(parents=True, exist_ok=True)
-    qa_dir.mkdir(parents=True, exist_ok=True)
-
-    np.savez(
+    target_path = resolve_output_path(
         targets_dir / f"track_{track_id}_targets.npz",
+        project_root,
+        raw_dir,
+    )
+    np.savez(
+        target_path,
         x_grid_mm=result["x_grid_mm"].astype(np.float64),
         w_mm=result["w_mm"].astype(np.float64),
         y_upper_mm=result["y_upper_mm"].astype(np.float64),
@@ -161,9 +263,17 @@ def run_track(project_dir: Path, track_id: int) -> dict:
     valid_widths_mm = result["w_mm"][result["valid_mask"]]
     median_width_mm = float(np.median(valid_widths_mm))
     mean_width_mm = float(np.mean(valid_widths_mm))
-    save_residual_map(result, qa_dir, track_id)
-    save_overlay(result, qa_dir, track_id)
-    save_width_curve(result, qa_dir, track_id, median_width_mm, mean_width_mm)
+    save_residual_map(result, qa_dir, project_root, raw_dir, track_id)
+    save_overlay(result, qa_dir, project_root, raw_dir, track_id)
+    save_width_curve(
+        result,
+        qa_dir,
+        project_root,
+        raw_dir,
+        track_id,
+        median_width_mm,
+        mean_width_mm,
+    )
 
     return {
         "track_id": track_id,
@@ -174,7 +284,7 @@ def run_track(project_dir: Path, track_id: int) -> dict:
     }
 
 
-def print_results(summaries):
+def print_results(summaries, track_ids=TRACK_IDS):
     print("\ntrack  power_W  valid_bins  median_mm  mean_mm")
     for summary in summaries:
         print(
@@ -184,7 +294,7 @@ def print_results(summaries):
         )
 
     by_track = {summary["track_id"]: summary for summary in summaries}
-    for higher_track, lower_track in zip(TRACK_IDS, TRACK_IDS[1:]):
+    for higher_track, lower_track in zip(track_ids, track_ids[1:]):
         higher = by_track[higher_track]["median_width_mm"]
         lower = by_track[lower_track]["median_width_mm"]
         outcome = "PASS" if higher > lower else "FLAG"
@@ -195,27 +305,78 @@ def print_results(summaries):
     print("Ordering FLAG outcomes are documented and never used to tune locked extraction constants.")
 
 
+def run_pipeline(
+    project_dir: Path,
+    track_ids=TRACK_IDS,
+    track_runner=run_track,
+    repository_anchor: Path = REPO_ROOT,
+):
+    project_root = resolve_repository_root(project_dir, repository_anchor=repository_anchor)
+    raw_dir = resolve_raw_dir(project_root)
+    raw_before = snapshot_raw(raw_dir)
+    active_error = None
+    summaries = None
+
+    try:
+        targets_dir = resolve_output_path(
+            project_root / "processed_data" / "targets",
+            project_root,
+            raw_dir,
+        )
+        targets_dir.mkdir(parents=True, exist_ok=True)
+        targets_dir = resolve_output_path(targets_dir, project_root, raw_dir)
+
+        qa_dir = resolve_output_path(targets_dir / "qa", project_root, raw_dir)
+        qa_dir.mkdir(parents=True, exist_ok=True)
+        qa_dir = resolve_output_path(qa_dir, project_root, raw_dir)
+
+        params_path = resolve_output_path(
+            targets_dir / "extraction_params.json",
+            project_root,
+            raw_dir,
+        )
+        with params_path.open("w", encoding="utf-8") as stream:
+            json.dump(extraction_params(), stream, indent=2, sort_keys=True)
+            stream.write("\n")
+
+        summaries = [
+            track_runner(project_root, raw_dir, targets_dir, qa_dir, track_id)
+            for track_id in track_ids
+        ]
+    except BaseException as exc:
+        active_error = exc
+        raise
+    finally:
+        try:
+            raw_after = snapshot_raw(raw_dir)
+        except BaseException as audit_error:
+            failure = RuntimeError("data/raw integrity audit failed closed: final snapshot unavailable.")
+            if active_error is not None:
+                failure.add_note(f"Pipeline error pending during audit: {active_error!r}")
+            raise failure from audit_error
+
+        difference = raw_snapshot_diff(raw_before, raw_after)
+        if any(difference.values()):
+            details = "; ".join(
+                f"{category}={paths}"
+                for category, paths in difference.items()
+                if paths
+            )
+            failure = RuntimeError(f"data/raw integrity FAIL: {details}")
+            if active_error is not None:
+                raise failure from active_error
+            raise failure
+        print("data/raw/ integrity PASS: no files created, modified, or deleted.")
+
+    print_results(summaries, track_ids=track_ids)
+    return summaries
+
+
 def main():
     parser = argparse.ArgumentParser(description="Extract local-width targets for all NSF FMRG tracks.")
     parser.add_argument("--project_dir", type=Path, default=Path("."), help="Repository/project root.")
     args = parser.parse_args()
-    project_dir = args.project_dir.resolve()
-
-    raw_before = snapshot_raw(project_dir)
-    targets_dir = project_dir / "processed_data" / "targets"
-    targets_dir.mkdir(parents=True, exist_ok=True)
-    with (targets_dir / "extraction_params.json").open("w", encoding="utf-8") as stream:
-        json.dump(extraction_params(), stream, indent=2, sort_keys=True)
-        stream.write("\n")
-
-    summaries = [run_track(project_dir, track_id) for track_id in TRACK_IDS]
-    raw_after = snapshot_raw(project_dir)
-    if raw_before != raw_after:
-        changed = sorted(set(raw_before) | set(raw_after))
-        changed = [path for path in changed if raw_before.get(path) != raw_after.get(path)]
-        raise ValueError(f"data/raw/ integrity FAIL; changed paths: {changed}")
-    print("data/raw/ integrity PASS: no files created, modified, or deleted.")
-    print_results(summaries)
+    run_pipeline(args.project_dir)
 
 
 if __name__ == "__main__":
