@@ -24,7 +24,7 @@ from targets import extract_track_targets, extraction_params
 
 TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
 TRACK_IDS = tuple(TRACK_POWER_W)
-TARGET_GRID_STEP_MM = 0.2
+TARGET_GRID_STEP_MM = extraction_params()["TARGET_GRID_STEP_MM"]
 EDGE_QA_WIDTH_MM = 0.5
 
 
