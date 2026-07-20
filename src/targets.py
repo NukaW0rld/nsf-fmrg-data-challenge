@@ -20,6 +20,13 @@ MIN_VALID_Y_POINTS = 50
 MIN_COLUMNS_PER_BIN = 10
 # Amendment A3: fixed a priori from the debug session's per-track R^2 evidence.
 DETREND_POLY_ORDER = 4
+# Amendment A4 (Gap 2 fix): baseline-relative fraction of each column's
+# peak-baseline separation above which a pixel is excluded from the detrend
+# surface fit. Fixed at the already-locked HALF_MAX_FRACTION value (D-01/D-03):
+# a pixel this codebase already classifies as "bead" by the half-max width
+# convention is, by that same definition, not background, so it must not be
+# allowed to bias the fitted surface. Not chosen from the resulting ordering.
+BEAD_MASK_HEIGHT_FRACTION = HALF_MAX_FRACTION
 
 TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
 TRACK_IDS = tuple(TRACK_POWER_W)
@@ -44,6 +51,8 @@ def extraction_params():
         'MIN_VALID_Y_POINTS': MIN_VALID_Y_POINTS,
         'MIN_COLUMNS_PER_BIN': MIN_COLUMNS_PER_BIN,
         'DETREND_POLY_ORDER': DETREND_POLY_ORDER,
+        'MAX_TRACKING_GAP_COLUMNS': MAX_TRACKING_GAP_COLUMNS,
+        'BEAD_MASK_HEIGHT_FRACTION': BEAD_MASK_HEIGHT_FRACTION,
     }
 
 
@@ -208,6 +217,32 @@ def finalize_smoothed_boundaries(y_lower_raw, y_upper_raw):
     return y_lower, y_upper, w_mm, valid_mask
 
 
+def bead_exclusion_mask(Z_mm):
+    # One shared, per-column-relative rule (mirrors D-01/D-02's
+    # BASELINE_PCT/PEAK_PCT convention): a pixel is excluded from the detrend
+    # surface fit only if it sits above baseline + BEAD_MASK_HEIGHT_FRACTION *
+    # (peak - baseline) for its own column, so tracks with very different
+    # absolute bead heights are masked by the same fraction, not the same
+    # absolute threshold. Columns without a valid baseline/peak separation are
+    # left fully included (the detrend fit degrades no worse than unmasked).
+    Z_mm = np.asarray(Z_mm, dtype=np.float64)
+    mask = np.ones(Z_mm.shape, dtype=bool)
+    for j in range(Z_mm.shape[1]):
+        column = Z_mm[:, j]
+        finite = np.isfinite(column)
+        if finite.sum() < MIN_VALID_Y_POINTS:
+            continue
+        vals = column[finite]
+        base = np.percentile(vals, BASELINE_PCT)
+        peak = np.percentile(vals, PEAK_PCT)
+        if peak - base < MIN_PEAK_BASELINE_SEPARATION_MM:
+            continue
+        threshold = base + BEAD_MASK_HEIGHT_FRACTION * (peak - base)
+        above = finite & (column > threshold)
+        mask[above, j] = False
+    return mask
+
+
 def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
     x_grid = target_grid()
     y_upper_raw = np.full(TARGET_GRID_N, np.nan, dtype=np.float64)
@@ -256,11 +291,13 @@ def extract_track_targets(height_dir, track_id):
     if 'pixel_size_mm' not in data['header']:
         raise ValueError(f'{expected_name} header is missing pixel_size_mm.')
 
+    fit_mask = bead_exclusion_mask(data['Z_mm'])
     Zd, coef = robust_plane_detrend(
         data['Z_mm'],
         data['x_actual_mm'],
         data['y_mm'],
         order=DETREND_POLY_ORDER,
+        fit_mask=fit_mask,
     )
     if coef is None:
         raise ValueError(f'Plane detrending failed for {expected_name}.')

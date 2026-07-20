@@ -202,13 +202,16 @@ def load_wyko_asc(height_dir, track_id, crop_to_common=True):
     }
 
 
-def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1):
+def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit_mask=None):
     Zs = Z_mm[::stride_y, ::stride_x]
     xs = x_mm[::stride_x]
     ys = y_mm[::stride_y]
     Xs, Ys = np.meshgrid(xs, ys)
     z = Zs.ravel()
     valid = np.isfinite(z)
+    if fit_mask is not None:
+        fit_mask_strided = np.asarray(fit_mask, dtype=bool)[::stride_y, ::stride_x]
+        valid = valid & fit_mask_strided.ravel()
     if valid.sum() < 100:
         return Z_mm.copy(), None
 
