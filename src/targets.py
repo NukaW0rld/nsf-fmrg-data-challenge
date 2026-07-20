@@ -186,7 +186,7 @@ def nan_savgol(v):
         if finite.sum() < 3:
             out[i] = v[i]
             continue
-        degree = min(SG_POLYORDER, finite.sum() - 1)
+        degree = min(SG_POLYORDER, finite.sum() - 2)
         coef = np.polyfit(offsets[finite], window[finite], degree)
         out[i] = np.polyval(coef, 0.0)
     return out
