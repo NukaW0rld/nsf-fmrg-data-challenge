@@ -1,8 +1,11 @@
+from datetime import datetime, timezone
 from pathlib import Path
 import argparse
 import hashlib
 import json
+import shutil
 import sys
+import uuid
 
 import matplotlib
 
@@ -305,6 +308,21 @@ def print_results(summaries, track_ids=TRACK_IDS):
     print("Ordering FLAG outcomes are documented and never used to tune locked extraction constants.")
 
 
+def publish_staging_dir(staging_dir: Path, targets_dir: Path, project_root: Path, raw_dir: Path):
+    backup_dir = resolve_output_path(
+        targets_dir.with_name(targets_dir.name + ".previous"),
+        project_root,
+        raw_dir,
+    )
+    if backup_dir.exists():
+        shutil.rmtree(backup_dir)
+    if targets_dir.exists():
+        targets_dir.rename(backup_dir)
+    staging_dir.rename(targets_dir)
+    if backup_dir.exists():
+        shutil.rmtree(backup_dir)
+
+
 def run_pipeline(
     project_dir: Path,
     track_ids=TRACK_IDS,
@@ -316,6 +334,7 @@ def run_pipeline(
     raw_before = snapshot_raw(raw_dir)
     active_error = None
     summaries = None
+    staging_dir = None
 
     try:
         targets_dir = resolve_output_path(
@@ -323,24 +342,50 @@ def run_pipeline(
             project_root,
             raw_dir,
         )
-        targets_dir.mkdir(parents=True, exist_ok=True)
-        targets_dir = resolve_output_path(targets_dir, project_root, raw_dir)
 
-        qa_dir = resolve_output_path(targets_dir / "qa", project_root, raw_dir)
+        run_id = uuid.uuid4().hex
+        staging_dir = resolve_output_path(
+            project_root / "processed_data" / f".targets-staging-{run_id}",
+            project_root,
+            raw_dir,
+        )
+        staging_dir.parent.mkdir(parents=True, exist_ok=True)
+        staging_dir.mkdir()
+        staging_dir = resolve_output_path(staging_dir, project_root, raw_dir)
+
+        qa_dir = resolve_output_path(staging_dir / "qa", project_root, raw_dir)
         qa_dir.mkdir(parents=True, exist_ok=True)
         qa_dir = resolve_output_path(qa_dir, project_root, raw_dir)
 
+        params = extraction_params()
         params_path = resolve_output_path(
-            targets_dir / "extraction_params.json",
+            staging_dir / "extraction_params.json",
             project_root,
             raw_dir,
         )
         with params_path.open("w", encoding="utf-8") as stream:
-            json.dump(extraction_params(), stream, indent=2, sort_keys=True)
+            json.dump(params, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+
+        manifest_path = resolve_output_path(
+            staging_dir / "manifest.json",
+            project_root,
+            raw_dir,
+        )
+        manifest = {
+            "run_id": run_id,
+            "published_at_utc": datetime.now(timezone.utc).isoformat(),
+            "track_ids": list(track_ids),
+            "extraction_params_sha256": hashlib.sha256(
+                json.dumps(params, sort_keys=True).encode("utf-8")
+            ).hexdigest(),
+        }
+        with manifest_path.open("w", encoding="utf-8") as stream:
+            json.dump(manifest, stream, indent=2, sort_keys=True)
             stream.write("\n")
 
         summaries = [
-            track_runner(project_root, raw_dir, targets_dir, qa_dir, track_id)
+            track_runner(project_root, raw_dir, staging_dir, qa_dir, track_id)
             for track_id in track_ids
         ]
     except BaseException as exc:
@@ -353,6 +398,8 @@ def run_pipeline(
             failure = RuntimeError("data/raw integrity audit failed closed: final snapshot unavailable.")
             if active_error is not None:
                 failure.add_note(f"Pipeline error pending during audit: {active_error!r}")
+            if staging_dir is not None and staging_dir.exists():
+                shutil.rmtree(staging_dir, ignore_errors=True)
             raise failure from audit_error
 
         difference = raw_snapshot_diff(raw_before, raw_after)
@@ -363,9 +410,19 @@ def run_pipeline(
                 if paths
             )
             failure = RuntimeError(f"data/raw integrity FAIL: {details}")
+            if staging_dir is not None and staging_dir.exists():
+                shutil.rmtree(staging_dir, ignore_errors=True)
             if active_error is not None:
                 raise failure from active_error
             raise failure
+
+        # Only a fully successful, raw-audit-clean run is published atomically;
+        # a partial run's staging directory is discarded so the live
+        # processed_data/targets/ tree never mixes generations (CR-02).
+        if active_error is None and staging_dir is not None:
+            publish_staging_dir(staging_dir, targets_dir, project_root, raw_dir)
+        elif staging_dir is not None and staging_dir.exists():
+            shutil.rmtree(staging_dir, ignore_errors=True)
         print("data/raw/ integrity PASS: no files created, modified, or deleted.")
 
     print_results(summaries, track_ids=track_ids)

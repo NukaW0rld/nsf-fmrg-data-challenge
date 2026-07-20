@@ -31,9 +31,27 @@ def make_repository(base_dir):
     return root
 
 
+def require_no_published_or_staged_output(root):
+    require(
+        not (root / "processed_data" / "targets").exists(),
+        "a failed run must never publish a mixed-generation targets directory (CR-02)",
+    )
+    processed_data = root / "processed_data"
+    if processed_data.exists():
+        leftover_staging = [
+            entry for entry in processed_data.iterdir()
+            if entry.name.startswith(".targets-staging-")
+        ]
+        require(not leftover_staging, "a failed run must discard its staging directory (CR-02)")
+
+
 def clean_stub(project_root, raw_dir, targets_dir, qa_dir, track_id):
     require(raw_dir == (project_root / "data" / "raw").resolve(), "stub must receive canonical raw path")
-    require(targets_dir == (project_root / "processed_data" / "targets").resolve(), "stub must receive canonical targets path")
+    require(
+        targets_dir.parent == (project_root / "processed_data").resolve()
+        and targets_dir.name.startswith(".targets-staging-"),
+        "stub must receive a fresh staging directory under processed_data (CR-02)",
+    )
     require(qa_dir == (targets_dir / "qa").resolve(), "stub must receive canonical QA path")
     (targets_dir / f"stub_{track_id}.txt").write_text("allowed output\n", encoding="utf-8")
     return {
@@ -143,7 +161,12 @@ def test_success_path_audits_raw_in_finally():
             "mean_width_mm": 1.0,
         }], "successful pipeline must return track summaries")
         require(len(calls) == 2, "successful pipeline must take before and finally snapshots")
-        require((root / "processed_data" / "targets" / "stub_8.txt").is_file(), "allowed output must be written below targets")
+        require((root / "processed_data" / "targets" / "stub_8.txt").is_file(), "allowed output must be published below targets")
+        leftover_staging = [
+            entry for entry in (root / "processed_data").iterdir()
+            if entry.name.startswith(".targets-staging-")
+        ]
+        require(not leftover_staging, "a successful publish must not leave a staging directory behind (CR-02)")
 
 
 def test_injected_failure_propagates_after_clean_audit():
@@ -175,6 +198,7 @@ def test_injected_failure_propagates_after_clean_audit():
             runner.snapshot_raw = original_snapshot
 
         require(len(calls) == 2, "failed pipeline must still take the finally snapshot")
+        require_no_published_or_staged_output(root)
 
 
 def test_raw_mutation_takes_precedence_and_chains_failure():
@@ -195,6 +219,8 @@ def test_raw_mutation_takes_precedence_and_chains_failure():
             require(exc.__cause__ is sentinel, "integrity failure must chain the original pipeline error")
         else:
             raise AssertionError("Expected raw mutation to fail closed")
+
+        require_no_published_or_staged_output(root)
 
 
 def test_final_audit_failure_fails_closed():
@@ -221,6 +247,8 @@ def test_final_audit_failure_fails_closed():
                 raise AssertionError("Expected unavailable final snapshot to fail closed")
         finally:
             runner.snapshot_raw = original_snapshot
+
+        require_no_published_or_staged_output(root)
 
 
 if __name__ == "__main__":

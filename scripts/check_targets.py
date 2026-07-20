@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import hashlib
 import json
 import sys
 
@@ -129,6 +130,25 @@ def main():
         persisted_params = json.load(stream)
     require(persisted_params == extraction_params(), (
         "Persisted extraction_params.json does not match the locked code constants."
+    ))
+
+    manifest_path = targets_dir / "manifest.json"
+    require(manifest_path.exists(), (
+        f"Missing run manifest {manifest_path}: cannot verify all tracks come from the same "
+        "completed extraction run."
+    ))
+    with manifest_path.open(encoding="utf-8") as stream:
+        manifest = json.load(stream)
+    expected_digest = hashlib.sha256(
+        json.dumps(persisted_params, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    require(manifest.get("extraction_params_sha256") == expected_digest, (
+        "manifest.json extraction_params_sha256 does not match extraction_params.json: "
+        "the run manifest does not correspond to the persisted parameters."
+    ))
+    require(set(manifest.get("track_ids", [])) == set(TRACK_IDS), (
+        f"manifest.json track_ids {manifest.get('track_ids')} do not match the expected "
+        f"track set {list(TRACK_IDS)}: artifacts may be a mixed generation."
     ))
 
     summaries = [check_track(targets_dir, track_id) for track_id in TRACK_IDS]
