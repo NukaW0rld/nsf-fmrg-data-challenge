@@ -22,6 +22,9 @@ EXPECTED_KEYS = {"x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm", "valid_mask"}
 FLOAT_KEYS = ("x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm")
 EXPECTED_SHAPE = (400,)
 Y_STRIP_EXTENT_MM = 1.907
+# Locked minimum usable coverage per decision U-02: one project-wide floor,
+# no per-track allowance or exemption.
+MIN_VALID_FRACTION = 0.5
 
 
 def require(condition, message):
@@ -92,8 +95,10 @@ def check_track(targets_dir: Path, track_id: int) -> dict:
         valid_count = int(valid_mask.sum())
         require(valid_count > 0, f"Track {track_id}: all-invalid artifacts are prohibited.")
         valid_fraction = valid_count / len(valid_mask)
-        if valid_fraction < 0.5:
-            print(f"Track {track_id} valid fraction {valid_fraction:.1%} is below 50% — FLAG")
+        require(valid_fraction >= MIN_VALID_FRACTION, (
+            f"Track {track_id}: valid fraction {valid_fraction:.1%} is below the "
+            f"{MIN_VALID_FRACTION:.1%} MIN_VALID_FRACTION floor — extraction likely failed for this track."
+        ))
 
         return {
             "track_id": track_id,
