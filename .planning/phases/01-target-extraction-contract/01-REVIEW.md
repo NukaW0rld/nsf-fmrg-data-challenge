@@ -1,10 +1,11 @@
 ---
 phase: 01-target-extraction-contract
-reviewed: 2026-07-20T21:50:24Z
+reviewed: 2026-07-21T17:19:38Z
 depth: standard
-files_reviewed: 8
+files_reviewed: 9
 files_reviewed_list:
   - scripts/check_targets.py
+  - scripts/diagnose_track10_coverage.py
   - scripts/diagnose_width_regression.py
   - scripts/run_target_extraction.py
   - src/nsf_fmrg_data.py
@@ -13,8 +14,8 @@ files_reviewed_list:
   - tests/test_run_target_extraction.py
   - tests/test_targets.py
 findings:
-  critical: 3
-  warning: 3
+  critical: 0
+  warning: 6
   info: 2
   total: 8
 status: issues_found
@@ -22,176 +23,138 @@ status: issues_found
 
 # Phase 01: Code Review Report
 
-**Reviewed:** 2026-07-20T21:50:24Z
+**Reviewed:** 2026-07-21T17:19:38Z
 **Depth:** standard
-**Files Reviewed:** 8
+**Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-This review supersedes the earlier `01-REVIEW.md`/`01-REVIEW-FIX.md` pass (which covered plans 01-01..01-05) and evaluates the full current state of the target-extraction contract, including the 01-06/01-07/01-08 gap-closure sequence (width-ordering diagnosis + bead-masking detrend fix + artifact regeneration).
+This is a fresh, independent pass over the same nine files reviewed on 2026-07-20T21:50:24Z, plus `scripts/diagnose_track10_coverage.py` (new since that pass). It does not assume the four gap-closure plans (01-09..01-12) actually fixed what they claim; each of the prior review's three CRITICALs and three WARNINGs was independently re-verified against the real repository and real data, not just re-read.
 
-All three test suites (`tests/test_nsf_fmrg_data.py`, `tests/test_targets.py`, `tests/test_run_target_extraction.py`) were executed in a fresh venv against the real repository and **all 38 tests pass**. `git diff e88f8d2^..HEAD` for this gap-closure sequence is small and surgical: a new `fit_mask` parameter threaded through `robust_plane_detrend`, a new `bead_exclusion_mask()` in `targets.py`, and a new `scripts/diagnose_width_regression.py` diagnostic tool.
+**Verification method:** all three test suites were run in the project's `.venv` (38+12+10 = all tests pass), and — going beyond "tests pass" — the actual production pipeline was executed end-to-end against the real `data/raw/` dataset (`scripts/run_target_extraction.py --project_dir .` followed by `scripts/check_targets.py --project_dir .`), plus both diagnostic scripts, to observe real behavior rather than trust the diff.
 
-This review did not stop at "tests pass," per the adversarial mandate. Two independent lines of investigation surfaced real, reproduced problems the test suite does not catch:
+**Prior CRITICALs — confirmed fixed:**
+- **CR-01** (track 10 95% invalid coverage): re-running the real pipeline now yields track 10 = 242/400 valid (60.5%), not 21/400 (5.25%). The `DETREND_MAX_Y_DEGREE = 2` cross-track degree cap (Amendment A5) genuinely resolves the edge-manufactured-feature mechanism that was destroying track 10's coverage.
+- **CR-02** (weak coverage gate): `scripts/check_targets.py` now hard-`require()`s `valid_fraction >= MIN_VALID_FRACTION` (0.5); a real run against the regenerated artifacts passes this gate honestly (all four tracks clear 0.5).
+- **CR-03** (symlink-following `rmtree`): `reject_symlink_path()` plus per-step `is_symlink()` checks are now present at every stage of `publish_staging_dir`; `tests/test_run_target_extraction.py`'s four symlink-attack regression tests all pass, including the specific `targets.previous`-symlink and `processed_data`-symlink scenarios the prior review reproduced as live exploits.
 
-1. **Real-data verification.** `scripts/check_targets.py` was re-run against the actual, currently-persisted `processed_data/targets/*.npz` artifacts (published `2026-07-20T21:34:24Z`, `extraction_params_sha256` matching the current locked constants including the new `BEAD_MASK_HEIGHT_FRACTION` fix) and the resulting QA figures were inspected. Track 10's artifact is 95% invalid and the width-ordering regression this phase exists to fix is still present for the 10-vs-14 pair (CR-01), and the checker that is supposed to gate this doesn't fail on it (CR-02).
-2. **Reproduced exploit against `run_target_extraction.py`'s publish step.** The prior review's CR-02 ("resolved output paths allow destructive operations on unrelated repository trees") was independently re-tested against the current code in an isolated scratch repository and is **still exploitable**: a pre-existing symlink at `processed_data/targets.previous` pointing at `src/` causes a successful pipeline run to `shutil.rmtree()` the entire `src/` directory (CR-03, reproduced live below).
+**Prior WARNINGs — confirmed fixed:** WR-01 (`find_track_file`'s no-op regex fallback removed — verified via `test_find_track_file_rejects_unanchored_substring_match`), WR-02 (thermal loader now enforces `Thermal_{track_id}.mat` exact-name; SEM loader now rejects symlinked track dirs — verified via tests), WR-03 for `diagnose_width_regression.py` specifically (bead-mask axis added — but see new WARNING below, since the fix did not extend to the newer `DETREND_MAX_Y_DEGREE` parameter).
 
-## Critical Issues
-
-### CR-01: Track 10's persisted target artifact is 95% invalid and still violates the width-ordering contract this phase was built to fix
-
-**File:** `processed_data/targets/track_10_targets.npz` (produced by `src/targets.py:246-314`, `scripts/run_target_extraction.py:245-291`)
-**Issue:**
-Running `scripts/check_targets.py` against the current, freshly-published artifacts (manifest `run_id=0a50e5c1...`, published `2026-07-20T21:34:24Z`) produces:
-
-```
-Track 10 valid fraction 5.2% is below 50% — FLAG
-
-track  power_W  valid_bins  median_mm  mean_mm
-    8      400         359     0.7411   0.6808
-   10      350          21     0.2509   0.1493
-   14      300         301     0.5264   0.4794
-   21      200         324     0.2412   0.2834
-Ordering 8 vs 10: 0.7411 mm > 0.2509 mm — PASS
-Ordering 10 vs 14: 0.2509 mm > 0.5264 mm — FLAG
-Ordering 14 vs 21: 0.5264 mm > 0.2412 mm — PASS
-ALL CHECKS PASSED
-```
-
-Track 10 only produces 21 of 400 valid grid slots (5.25%). Its median width (0.2509 mm, computed from that 21-point sample) is nearly identical to Track 21's width (the *lowest*-power track, 200 W) even though Track 10 is the second-*highest*-power track (350 W). Excluding Track 10, the remaining three tracks (8: 0.74 mm @ 400 W, 14: 0.53 mm @ 300 W, 21: 0.24 mm @ 200 W) are cleanly monotonic in power — strongly indicating Track 10's number is an artifact of extraction failure, not real physics.
-
-I instrumented the exact per-bin rejection reasons for Track 10 through the current locked pipeline (`bead_exclusion_mask` + `robust_plane_detrend(order=4, fit_mask=...)` + `extract_targets_from_arrays`):
-
-```
-{'no_columns': 0, 'gap_fail': 112, 'no_baseline_sep': 0, 'clipped_run_only': 267, 'ok': 21}
-```
-
-267 of 400 bins (66.75%) fail because the *only* above-half-max run in that bin's profile touches the y=0 or y=479 edge of the mapped strip, and `halfmax_edges` (`src/targets.py:141-147`) deliberately excludes boundary-clipped runs as "never a tracking candidate" (by design, per D-01/D-03). Visual confirmation: `processed_data/targets/qa/track_10_residual_map.png` shows the elevated (bead) residual concentrated along the y≈0–0.4 mm edge of the strip for nearly the full 20–100 mm track length, unlike Track 14's residual map (`track_14_residual_map.png` / `track_14_overlay.png`), which shows a clean bead band centered around y≈0.5–1.3 mm, well clear of both edges. Track 10's bead is not fully captured within the profilometer's y-scan window (or the strip is misaligned for this file), so the boundary-exclusion safeguard — correct in isolation — silently discards the vast majority of the track for this one file. All four `Heightmap_*.ASC` headers report the identical `y_size=480`, `pixel_size_mm=0.003982`, so this is not explained by a different strip height for Track 10.
-
-This matters because `CLAUDE.md` is explicit that only 4 track conditions exist and cross-track leave-one-out validation is required; a target artifact that is 95% invalid for one of the four conditions means that condition is effectively unusable for training/validation, and the phase's own regenerated ordering diagnostic (the entire purpose of 01-06/07/08) is still flagged as failing.
-
-**Fix:**
-Do not treat this as "documented and never used to tune" (the `print_results` disclaimer at `src/targets.py:77` is appropriate for genuine physical ordering ambiguity, not for a track that is 95% unextracted). Before this phase is considered done:
-1. Investigate why Track 10's bead sits at/beyond the y-strip edge for nearly the entire track length.
-2. Either re-acquire/re-crop Track 10 with a wider y-window that fully contains the bead, or make a principled, documented decision (not derived from the resulting ordering, consistent with the project's own Amendment-A3/A4 precedent) about how edge-clipped tracks should be handled, and re-run the extraction.
-3. Do not treat `processed_data/targets/track_10_targets.npz` as production-ready until it clears a real minimum-coverage bar (see CR-02).
-
-### CR-02: `check_targets.py` treats catastrophic per-track coverage loss as a non-blocking print, so "ALL CHECKS PASSED" is emitted even when a track is 95% invalid
-
-**File:** `scripts/check_targets.py:92-96`
-**Issue:**
-```python
-valid_count = int(valid_mask.sum())
-require(valid_count > 0, f"Track {track_id}: all-invalid artifacts are prohibited.")
-valid_fraction = valid_count / len(valid_mask)
-if valid_fraction < 0.5:
-    print(f"Track {track_id} valid fraction {valid_fraction:.1%} is below 50% — FLAG")
-```
-The only coverage guard is `valid_count > 0`; a track with just 1 valid slot out of 400 would pass. The `< 50%` branch is a `print`, not a `require(...)` — it never raises and never prevents `main()` from reaching `print("ALL CHECKS PASSED")`. This is precisely how CR-01 (5.25% valid coverage) went unnoticed by the automated "contract" checker: the script that exists specifically to gate the target-extraction contract silently accepts a near-total extraction failure for one of the four track conditions and reports success.
-
-**Fix:** Promote the low-coverage check to a hard failure (or at minimum a distinct, non-zero exit path) with a project-chosen minimum coverage threshold, e.g.:
-```python
-MIN_VALID_FRACTION = 0.5  # or whatever the team decides is the real floor
-
-require(
-    valid_fraction >= MIN_VALID_FRACTION,
-    f"Track {track_id}: valid fraction {valid_fraction:.1%} is below the "
-    f"{MIN_VALID_FRACTION:.0%} minimum-coverage floor — extraction likely failed.",
-)
-```
-If some tracks are expected to have legitimately lower (but still usable) coverage, encode that as an explicit, per-track, documented allowance — not a silent print for every track.
-
-### CR-03: `publish_staging_dir` follows a pre-existing symlink at the backup path and recursively deletes whatever it points at — reproduced, deletes `src/` in a live run
-
-**File:** `scripts/run_target_extraction.py:62-70` (`resolve_output_path`), `294-306` (`publish_staging_dir`)
-**Issue:** `resolve_output_path` only forbids two things: escaping `project_root`, and landing inside `data/raw`. It resolves symlinks (`Path(path).resolve(strict=False)`) but does not reject them when they point elsewhere inside the repository. `publish_staging_dir` computes `backup_dir = resolve_output_path(targets_dir.with_name(targets_dir.name + ".previous"), ...)` and then unconditionally does `shutil.rmtree(backup_dir)` if it exists.
-
-If `processed_data/targets.previous` already exists as a symlink to any other in-repo directory (e.g. `src/`, `.git/`, `tests/`) — left over from a prior partial failure, created by another process, or planted maliciously — `resolve_output_path` happily resolves it to that real directory (since it isn't under `data/raw`), and `publish_staging_dir` deletes it. I reproduced this against the current code in an isolated scratch repository (not the real project repo):
-
-```
-Before publish: src exists? True VICTIM exists? True
-data/raw/ integrity PASS: no files created, modified, or deleted.
-run_pipeline completed without error
-After publish: src exists? False VICTIM exists? False
-src contents: GONE
-```
-
-`run_pipeline` reported the `data/raw/` integrity audit as PASS (correctly — `data/raw/` genuinely wasn't touched) and returned normally, while `src/` (standing in for any non-`data/raw` repository directory, e.g. `.git/`) was recursively deleted. The existing regression `tests/test_run_target_extraction.py::test_symlink_output_into_raw_is_rejected` only covers a symlink pointing *into* `data/raw`; it does not cover a symlink at `targets.previous` (or `processed_data` itself) pointing at any other in-repository directory, so this path has no test coverage.
-
-**Fix:** Reject symlinks outright at every output path the publisher touches, rather than resolving through them:
-```python
-def resolve_output_path(path: Path, project_root: Path, raw_dir: Path) -> Path:
-    root = Path(project_root).resolve(strict=True)
-    protected_raw = Path(raw_dir).resolve(strict=True)
-    candidate = Path(path)
-    if candidate.is_symlink():
-        raise ValueError(f"Output path must not be a symlink: {candidate}.")
-    resolved = candidate.resolve(strict=False)
-    if not resolved.is_relative_to(root):
-        raise ValueError(f"Output path escapes the canonical repository: {resolved}.")
-    if resolved == protected_raw or resolved.is_relative_to(protected_raw):
-        raise ValueError(f"Output path enters the protected raw tree: {resolved}.")
-    return resolved
-```
-and/or have `publish_staging_dir` `lstat()`/`is_symlink()`-check `backup_dir` and `targets_dir` immediately before `rmtree`/`rename` and refuse to operate on a symlink. Add a regression that plants a symlink at `targets.previous` (and separately at `processed_data`) pointing at a harmless in-repo victim directory and asserts the victim survives `run_pipeline`.
+Despite the real, verified progress above, this pass surfaced **new problems introduced by, or left unaddressed by, the fix commits themselves** — mostly around the two diagnostic scripts silently diverging from the production path they exist to characterize, and validation/defense-in-depth gaps that are inconsistent with the rigor applied elsewhere in the same fix commits. None of these rise to the level of "the shipped pipeline produces wrong targets" — that specific risk (CR-01/02/03) is genuinely closed — but several are real, reproduced defects a future engineer would trip over.
 
 ## Warnings
 
-### WR-01: `find_track_file`'s fallback condition makes its anchored boundary-regex protection a no-op
+### WR-01: `diagnose_track10_coverage.py`'s "production" path omits `DETREND_MAX_Y_DEGREE` and reports numbers 10x worse than what production actually produces
 
-**File:** `src/nsf_fmrg_data.py:28`
+**File:** `scripts/diagnose_track10_coverage.py:60-64` (`production_residual_profile`)
+**Issue:** This file was added in the same commit sequence (01-11) that introduced `DETREND_MAX_Y_DEGREE` as the fix for track 10's coverage collapse, yet its own `production_residual_profile()` — the function whose docstring-equivalent name claims to model "the current locked pipeline" — calls:
+```python
+Zd, coef = robust_plane_detrend(
+    Z_mm, x_actual_mm, y_mm, order=DETREND_POLY_ORDER, fit_mask=fit_mask,
+)
+```
+with no `max_y_degree=DETREND_MAX_Y_DEGREE`. `rejection_reason_histogram()` and `fitted_surface_edge_report()` both operate on this same under-parameterized `Zd`. I ran this diagnostic against the real dataset and it reports `rejection_ok=21` (5.25% valid) for track 10 — while the actual production run (`scripts/run_target_extraction.py` → `scripts/check_targets.py`, same real data, same day) reports 242/400 valid (60.5%). A future engineer re-running this "coverage diagnosis" tool to investigate a regression would see track 10 apparently still catastrophically broken and either waste time re-diagnosing an already-fixed problem, or lose confidence in a fix that is in fact working.
+**Fix:**
+```python
+from targets import DETREND_MAX_Y_DEGREE, ...
+
+def production_residual_profile(Z_mm, x_actual_mm, y_mm):
+    fit_mask = bead_exclusion_mask(Z_mm)
+    Zd, coef = robust_plane_detrend(
+        Z_mm, x_actual_mm, y_mm, order=DETREND_POLY_ORDER,
+        fit_mask=fit_mask, max_y_degree=DETREND_MAX_Y_DEGREE,
+    )
+```
+
+### WR-02: `diagnose_width_regression.py`'s sweep still never applies `DETREND_MAX_Y_DEGREE`, so even its "production-labeled" row diverges from real output
+
+**File:** `scripts/diagnose_width_regression.py:107-131` (`run_sweep`)
+**Issue:** The prior review's WR-03 ("no longer reflects the production detrend path") was fixed for the *bead-mask* axis (a `BEAD_MASK_OPTIONS` sweep dimension was added, with a comment stating `bead_mask=True` rows "exercise the production detrend path"). But `robust_plane_detrend(...)` inside `run_sweep` is still called without `max_y_degree`, so the row the script's own comment labels as production-equivalent (`order=4, continuity=True, bead_mask=True`) is not actually production-equivalent post-Amendment-A5. Verified by execution: that row reports track 10 median width 0.2509 mm, while the real, current production output (via `check_targets.py` against freshly regenerated artifacts) is 0.3713 mm — a ~48% relative difference that would look like a regression to anyone comparing this sweep's "production" row against the live pipeline.
+**Fix:** Add a `max_y_degree` sweep axis (or at minimum apply `DETREND_MAX_Y_DEGREE` unconditionally on `bead_mask=True` rows, mirroring how `bead_mask` gates `fit_mask`), and update the module comment (`BEAD_MASK_OPTIONS` docstring-comment at lines 39-42) accordingly — it currently claims `bead_mask=True` rows exercise "the production detrend path," which is no longer true.
+
+### WR-03: Thermal and height-map loaders resolve through `find_track_file` with no symlink rejection, unlike every other data-touching path in this codebase
+
+**File:** `src/nsf_fmrg_data.py:118-124` (`extract_final_thermal_frames`), `173-177` (`load_wyko_asc`)
+**Issue:** `get_sem_tile_paths` explicitly rejects a symlinked `SEM_{track_id}`/`PlainImages` directory (`root.is_symlink() or root.parent.is_symlink()`), and the entire write path in `run_target_extraction.py` now has extensive, tested symlink defenses (`reject_symlink_path`, `snapshot_raw`'s escape check). But the two `find_track_file`-based read loaders have no equivalent: `find_track_file` uses `p.is_file()` (which follows symlinks) with no `p.is_symlink()` check, so a symlinked `Thermal_10.mat` or `Heightmap_10.ASC` under `data/raw/` pointing anywhere else on the filesystem would be silently matched, opened, and its target's bytes parsed as thermal/height data — with no error and no indication in the returned dict that the file was a symlink. Given how much deliberate effort the same fix commits invested in symlink defense elsewhere (CR-03, WR-02), this is a real gap in the read path that would be simple to close and is inconsistent with the codebase's own established threat model.
+**Fix:** Reject symlinks in `find_track_file` itself:
+```python
+for p in root.rglob('*'):
+    if p.is_file() and not p.is_symlink() and p.suffix.lower() in suffixes:
+        ...
+```
+
+### WR-04: `load_wyko_asc` has no exact-filename guard of its own and silently defaults a missing `pixel_size_mm` header — both diagnostic scripts call it directly and get neither protection
+
+**File:** `src/nsf_fmrg_data.py:173-180` (`load_wyko_asc`) vs. `src/targets.py:299-306` (`extract_track_targets`)
+**Issue:** `extract_final_thermal_frames` enforces its exact-name check (`Thermal_{track_id}.mat`) *inside itself*, so every caller gets the protection automatically. `load_wyko_asc` has no equivalent internal check — the `Heightmap_{track_id}.ASC` exact-name assertion only exists in `targets.extract_track_targets`, one layer up. `scripts/diagnose_track10_coverage.py:measure_track` and `scripts/diagnose_width_regression.py:run_sweep` both call `load_wyko_asc(height_dir, track_id)` directly and never re-check the resolved filename, so if `find_track_file` ever resolves an unintended `.ASC`/`.txt` file for either diagnostic, there is no error — it silently analyzes the wrong file. The same function also does `pixel = float(header.get('pixel_size_mm', 0.003982))`, silently substituting a hardcoded default if the header field is absent, rather than raising; `extract_track_targets` only catches this *after* `load_wyko_asc` has already used the (possibly wrong) default to build every coordinate array in its result, and neither diagnostic script re-checks it at all.
+**Fix:** Move the exact-filename assertion and the `pixel_size_mm`-presence check into `load_wyko_asc` itself (as `extract_final_thermal_frames` already does for `.mat` files), so every caller — production and diagnostic alike — gets the same guarantee without having to duplicate it.
+
+### WR-05: `robust_plane_detrend`'s `order`/`max_y_degree` validation runs after the degenerate-data early return, so invalid parameter values are silently swallowed instead of raising
+
+**File:** `src/nsf_fmrg_data.py:220-236`
 **Issue:**
 ```python
-if re.search(rf'(^|[_\-\s]){track_id}($|[_\-\s\.])', name) or f'{track_id}' in name:
-    matches.append(p)
+if valid.sum() < 100:
+    return Z_mm.copy(), None
+
+if not isinstance(order, (int, np.integer)) or order < 0:
+    raise ValueError('order must be a non-negative integer.')
+if max_y_degree is not None and (not isinstance(max_y_degree, (int, np.integer)) or max_y_degree < 0):
+    raise ValueError('max_y_degree must be a non-negative integer or None.')
 ```
-The `or f'{track_id}' in name` clause is a strict superset of the regex match (any regex match is already a substring match), so the entire condition reduces to `f'{track_id}' in name`. The word-boundary-anchored regex — clearly written to prevent, e.g., track 10 accidentally matching a file containing "210" or a resolution/date string — provides no actual protection because of the `or`. With the current 4-file dataset this does not currently misfire (verified: `find_track_file` resolves each of the 4 tracks' thermal/height-map files correctly), but it is a latent correctness risk for any future file whose name happens to contain a track ID's digits anywhere — `find_track_file` would silently include it as a candidate and `natural_key`-sort could pick the wrong file with no error raised.
-**Fix:** Drop the fallback (the regex is already correct), or intentionally document why a permissive fallback is desired:
+The `order`/`max_y_degree` type/value checks are placed *after* the `valid.sum() < 100` early return. Reproduced directly:
 ```python
-if re.search(rf'(^|[_\-\s]){track_id}($|[_\-\s\.])', name):
-    matches.append(p)
+>>> robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=1, stride_y=5, order=-1)
+(array unchanged, None)   # no ValueError raised
+>>> robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=1, stride_y=5, order=4, max_y_degree=-5)
+(array unchanged, None)   # no ValueError raised
+```
+Whenever the strided/masked sample count for a given call happens to fall below 100 (a real, data-dependent condition — this is exactly the "degenerate fallback" path that `tests/test_nsf_fmrg_data.py::test_degenerate_fallback_is_preserved_for_all_orders` exercises, just never with an invalid `order`), a caller passing a malformed `order` or `max_y_degree` gets a silent `None` coefficient instead of the explicit `ValueError` the function is supposed to guarantee. Current production call sites always pass a hardcoded, correct `order=4`/`max_y_degree=2`, so this does not affect the shipped pipeline today, but it is a genuine validation-ordering bug in a function that is called directly by two diagnostic scripts and notebooks with programmatically-constructed `order` values (`diagnose_width_regression.py`'s `DETREND_ORDERS = (1, 2, 4)` sweep).
+**Fix:** Move the `order`/`max_y_degree` validation above the `valid.sum() < 100` check, so it runs unconditionally regardless of data shape:
+```python
+if not isinstance(order, (int, np.integer)) or order < 0:
+    raise ValueError('order must be a non-negative integer.')
+if max_y_degree is not None and (not isinstance(max_y_degree, (int, np.integer)) or max_y_degree < 0):
+    raise ValueError('max_y_degree must be a non-negative integer or None.')
+
+... # existing valid/fit_mask computation
+if valid.sum() < 100:
+    return Z_mm.copy(), None
 ```
 
-### WR-02: The exact-filename safety check exists only for height maps, not for thermal or SEM loaders
+### WR-06: `bin_profile`'s `np.nanmedian` over all-NaN slices emits an uncontrolled `RuntimeWarning` on every real pipeline run
 
-**File:** `src/targets.py:288-290` vs. `src/nsf_fmrg_data.py:114-130`, `133-137`
-**Issue:** `extract_track_targets` guards against `find_track_file` mis-selecting the wrong height map by asserting `Path(data['file']).name == f'Heightmap_{track_id}.ASC'` (raising `ValueError` otherwise). No equivalent verification exists in `extract_final_thermal_frames` (thermal `.mat` selection) or `get_sem_tile_paths` (SEM tile directory selection) — both rely solely on the fragile matching described in WR-01 with no post-hoc validation. If a future thermal/SEM filename collides under WR-01's loose matching, the wrong track's thermal cube or SEM tiles could be silently loaded and paired with the correct track's height-map targets, corrupting the thermal→geometry training pairing without any error.
-**Fix:** Add the same kind of exact-name (or otherwise strict) verification to `extract_final_thermal_frames` and `get_sem_tile_paths` that `extract_track_targets` already applies to height maps, e.g. assert the resolved filename matches `Thermal_{track_id}.mat` and the SEM directory matches `SEM_{track_id}`.
-
-### WR-03: `diagnose_width_regression.py` no longer reflects the production detrend path after the bead-mask fix landed
-
-**File:** `scripts/diagnose_width_regression.py:101-122`
-**Issue:** `run_sweep` calls `robust_plane_detrend(data['Z_mm'], data['x_actual_mm'], data['y_mm'], order=order)` with no `fit_mask` argument, i.e. it always exercises the pre-fix (unmasked) detrend path. That was correct when this script was written to diagnose the original regression (01-06), but since `src/targets.py:294-301`'s production path now always passes `fit_mask=bead_exclusion_mask(...)`, this diagnostic tool's sweep results no longer represent what the shipped pipeline actually does. A future engineer re-running this script to debug a new ordering anomaly (e.g. the Track 10 problem in CR-01) would be comparing against a stale, no-longer-applicable baseline with no indication in the script that it predates the bead-masking fix.
-**Fix:** Either add a `fit_mask` dimension to the sweep (masked vs. unmasked, matching how `DETREND_ORDERS`/`CONTINUITY_OPTIONS` are already swept) or add a prominent comment noting this script intentionally diagnoses the *pre-fix* detrend behavior and is not representative of current production output.
+**File:** `src/targets.py:93-99` (`bin_profile`)
+**Issue:** `np.nanmedian(Zd[:, columns], axis=1)` computes a per-row median across the columns selected for one x-bin. When a given y-row is entirely `NaN` across all selected columns (which happens for real data — bad/masked profilometer pixels), NumPy raises `RuntimeWarning: All-NaN slice encountered` for that row and returns `NaN`, which is the intended, correctly-handled behavior downstream (`fill_small_gaps`/`halfmax_edges` treat `NaN` correctly). Verified: every real run of `scripts/run_target_extraction.py`, `scripts/check_targets.py`, and both diagnostic scripts prints this warning to stderr on the very first line of output. Nothing filters, catches, or documents it, so it looks identical to an actual error in CI logs / terminal output for a codebase whose other paths are otherwise scrupulous about fail-closed, explicit signaling (e.g. the raw-integrity audit, the symlink guards). A maintainer skimming a log for the fail-closed `RuntimeError`/`ValueError` messages this pipeline is designed to emit could easily mistake this warning for one of them, or conversely start ignoring warnings from this script generally.
+**Fix:** Either explicitly suppress the specific, expected warning with a documented `with warnings.catch_warnings(): warnings.filterwarnings("ignore", r"All-NaN slice encountered")` around the `np.nanmedian` call, or precompute the all-NaN rows and pass them through directly rather than relying on NumPy's warning-then-NaN behavior.
 
 ## Info
 
-### IN-01: Magic numbers without derivation comments
+### IN-01: `import json` in `src/nsf_fmrg_data.py` is unused
 
-**File:** `scripts/check_targets.py:24`, `src/nsf_fmrg_data.py:68`
-**Issue:** `Y_STRIP_EXTENT_MM = 1.907` (check_targets.py) is close to but not derived inline from `y_size * pixel_size_mm` (≈1.9114 mm for all four current height maps, verified directly from their headers) — a reader can't tell if 1.907 is a deliberate safety margin or a stale/rounded constant. Similarly, `score = arr.size * (10 if 400 in arr.shape else 1)` in `find_thermal_array` hardcodes `400` with no comment connecting it to `EXTRACTED_THERMAL_FRAMES` (also 400, computed independently from `TARGET_GRID_N`/scan geometry) — the coincidence that both equal 400 is easy to break silently if either constant is later changed independently.
-**Fix:** Add a one-line comment deriving each constant, e.g. `# slightly below y_size * pixel_size_mm (1.9114 mm) to allow interpolation margin` and `# EXTRACTED_THERMAL_FRAMES is 400; bias toward arrays whose shape already matches it`.
+**File:** `src/nsf_fmrg_data.py:3`
+**Issue:** `import json` is present at module scope but `json` is never referenced anywhere in the file (confirmed via AST analysis — no `Name` node resolves to `json`). Dead import.
+**Fix:** Remove the unused import.
 
-### IN-02: Redundant duplicate call to `resolve_output_path` on an already-resolved path
+### IN-02: `diagnose_track10_coverage.py` reintroduces the exact redundant `resolve_output_path` pattern that was removed from `diagnose_width_regression.py`
 
-**File:** `scripts/diagnose_width_regression.py:160-166`
-**Issue:**
+**File:** `scripts/diagnose_track10_coverage.py:279-285`
+**Issue:** The prior review's IN-02 flagged an identical pattern in `diagnose_width_regression.py` (re-passing an already-resolved, already-created directory back through `resolve_output_path`) as dead/no-op noise, and that specific instance was since removed from `diagnose_width_regression.py`. `diagnose_track10_coverage.py` — a new file added after that fix — has the same pattern:
 ```python
 diagnostics_dir = resolve_output_path(
-    project_root / "processed_data" / "targets" / "diagnostics",
+    project_root / "processed_data" / "diagnostics",
     project_root,
     raw_dir,
 )
 diagnostics_dir.mkdir(parents=True, exist_ok=True)
 diagnostics_dir = resolve_output_path(diagnostics_dir, project_root, raw_dir)
 ```
-`resolve_output_path` already returns a fully resolved, validated path; re-passing its own output back through itself is dead/no-op code that adds noise without changing behavior.
-**Fix:** Drop the second call.
+Not a functional bug (the second call is a no-op given the first call already fully resolved and validated the path), but it is an inconsistency: the exact pattern this project already decided to clean up in one file was reintroduced, unreviewed, in its sibling.
+**Fix:** Drop the second `resolve_output_path` call, matching `diagnose_width_regression.py`'s current form.
 
 ---
 
-_Reviewed: 2026-07-20T21:50:24Z_
+_Reviewed: 2026-07-21T17:19:38Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
