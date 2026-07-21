@@ -1,14 +1,18 @@
 ---
-status: diagnosed
+status: testing
 phase: 01-target-extraction-contract
 source: [01-VERIFICATION.md]
 started: 2026-07-20T00:54:17Z
-updated: 2026-07-20T01:55:00Z
+updated: 2026-07-21T18:30:00Z
 ---
 
 ## Current Test
 
-[testing complete]
+number: 5
+name: Decide the 10-vs-14 width-ordering FLAG
+expected: |
+  A recorded decision. If (a): accept as a documented, known limitation — rationale recorded and carried as a caveat in ROADMAP.md/REQUIREMENTS.md before Phase 2 starts. If (b): commission a further gap-closure plan targeting the 10-vs-14 relationship specifically, without touching the now-resolved coverage fix. See `01-SIGNOFF-REQUEST.md` for full current numbers and the two prior honest (non-tuned) fix attempts already made against this defect class.
+awaiting: user response
 
 ## Tests
 
@@ -38,12 +42,20 @@ severity: minor
 expected: Amendments A1 and A2 remain scientifically acceptable after reviewing the real QA, and the locked constants were fixed before ordering inspection and were not tuned afterward.
 result: pass
 
+### 5. Decide the 10-vs-14 width-ordering FLAG
+expected: A recorded decision — accept the residual FLAG as a documented known limitation (option a, with rationale), or commission further diagnosed-defect investigation (option b). Current numbers (per `01-11-ORDERING-OUTCOME.md`): track 10 median 0.3713mm vs track 14 median 0.4765mm — narrower gap than before Amendment A5's coverage fix, but still not crossed into the expected 8>10>14>21 order. Two independent, pre-registered, outcome-independent diagnostic/fix cycles (01-06→08, then 01-11) have already targeted this defect class without forcing the outcome; the phase's HONEST-OUTCOME GUARD declines further automated tuning.
+result: [pending]
+
+### 6. Visual sign-off on 12 regenerated QA figures
+expected: Open all 12 figures under `processed_data/targets/qa/` (residual maps, boundary overlays, width curves for tracks 8/10/14/21) and answer the four questions in `01-SIGNOFF-REQUEST.md`: residual structure is scientifically acceptable process/substrate variation on all 4 tracks; boundary overlays are continuous and physically plausible with explicit (not silently bridged) gap shading, including track 10; track 10's terminal V-spike from Test 3 above is confirmed gone; the four locked constants (DETREND_POLY_ORDER, BEAD_MASK_HEIGHT_FRACTION, MAX_TRACKING_GAP_COLUMNS, DETREND_MAX_Y_DEGREE) are confirmed fixed independently of the ordering outcome. Note: this verification round's own inspection of track_10_overlay.png/track_10_width.png found a real, continuous boundary trace now exists (a major improvement over Test 3's prior near-total absence), but it is visibly more jagged than tracks 8/21 and the width curve trails toward near-zero past x≈70mm — flagged as a domain judgment call, not something automated checks can certify.
+result: [pending]
+
 ## Summary
 
-total: 4
+total: 6
 passed: 1
 issues: 3
-pending: 0
+pending: 2
 skipped: 0
 blocked: 0
 
