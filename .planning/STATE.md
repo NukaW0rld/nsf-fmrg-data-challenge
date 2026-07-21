@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-11-PLAN.md
-last_updated: "2026-07-21T17:01:38.231Z"
+stopped_at: Completed 01-12-PLAN.md
+last_updated: "2026-07-21T17:07:38.983Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-07-21
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 92%
 | Phase 01 P09 | 8min | 3 tasks | 3 files |
 | Phase 01 P10 | 12min | 2 tasks | 3 files |
 | Phase 01-target-extraction-contract P11 | 45min | 4 tasks | 11 files |
+| Phase 01 P12 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Diagnosed track 10's coverage collapse (5.2% valid) as a detrend-fitting artifact — raw argmax is interior, not physically truncated — using a committed re-runnable diagnostic that observes no fix outcome.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Pre-registered a 0.05mm fitted-surface edge tolerance and two candidate mechanisms in 01-11-CRITERION.md before any extraction-source change; Candidate A (basis conditioning) was rejected by a priori measurement (mathematically a no-op for a full-rank fit), and the criterion's own fallback selected Candidate B.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Implemented Amendment A5 (DETREND_MAX_Y_DEGREE=2), restoring track 10 to 242/400 (60.5%) valid bins and clearing the MIN_VALID_FRACTION floor; the 10-vs-14 width-ordering FLAG remains unresolved and is left for plan 01-12's human sign-off.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Corrected REQUIREMENTS.md's TARGET-02 status from a false Complete to an honest awaiting-human-sign-off state, citing 01-VERIFICATION.md and 01-11-ORDERING-OUTCOME.md.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Produced 01-SIGNOFF-REQUEST.md naming all 12 regenerated QA figures with per-figure acceptance questions and zero pre-ticked decision checkboxes; sign-off must be recorded via /gsd-verify-work, not self-certified by any plan.
 
 ### Pending Todos
 
@@ -129,6 +132,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-21T17:01:38.221Z
-Stopped at: Completed 01-11-PLAN.md
+Last session: 2026-07-21T17:07:38.974Z
+Stopped at: Completed 01-12-PLAN.md
 Resume file: None

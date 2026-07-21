@@ -88,7 +88,7 @@ Plans:
 
 **Wave 11** *(gap closure, blocked on Wave 10 completion)*
 
-- [ ] 01-12-PLAN.md — Correct the `REQUIREMENTS.md` TARGET-02 record and produce the human visual sign-off handoff for all 12 regenerated QA figures
+- [x] 01-12-PLAN.md — Correct the `REQUIREMENTS.md` TARGET-02 record and produce the human visual sign-off handoff for all 12 regenerated QA figures
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
