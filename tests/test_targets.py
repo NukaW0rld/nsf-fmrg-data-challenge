@@ -343,6 +343,90 @@ def test_track_id_does_not_affect_numeric_output():
         )
 
 
+def _edge_divergence_scenario(shelf_amplitude_mm):
+    # Mirrors tests/test_nsf_fmrg_data.py's track-10-shaped scenario, but
+    # exercised through the production targets.DETREND_POLY_ORDER /
+    # targets.DETREND_MAX_Y_DEGREE constants, to prove the SAME committed
+    # constant (not a per-track-tuned value) clears the criterion at two
+    # substrate magnitudes ~44x apart -- roughly track 10's measured raw span
+    # (~0.88mm) versus tracks 8/14/21's measured raw spans (~0.01-0.02mm),
+    # per 01-11-DIAGNOSIS.md. The interior bead is masked explicitly (rather
+    # than through targets.bead_exclusion_mask) so the deliberately-planted
+    # near-edge shelf feature stays in the fit data at every amplitude --
+    # bead_exclusion_mask's per-column percentile rule would otherwise also
+    # exclude the tall-amplitude shelf itself, hiding the very divergence
+    # this test exists to exercise.
+    x_mm = np.linspace(20.0, 100.0, 2000)
+    y_mm = np.linspace(0.0, 1.911, 480)
+    x_grid, y_grid = np.meshgrid(x_mm, y_mm)
+
+    centered_x = (x_grid - 60.0) / 40.0
+    centered_y = (y_grid - 0.9555) / 0.9555
+    substrate = 0.02 * centered_x - 0.01 * centered_y + 0.05
+
+    shelf_frac = 0.06
+    edge_band = y_mm < shelf_frac * y_mm[-1]
+    shelf = np.zeros_like(y_grid)
+    shelf[edge_band] = shelf_amplitude_mm * (1.0 - y_grid[edge_band] / (shelf_frac * y_mm[-1]))
+    Z_mm = substrate + shelf
+
+    bead_rows = (y_grid >= 0.8) & (y_grid <= 1.1)
+    Z_mm = Z_mm.copy()
+    Z_mm[bead_rows] += 0.2
+    fit_mask = np.ones(Z_mm.shape, dtype=bool)
+    fit_mask[bead_rows] = False
+    return Z_mm, x_mm, y_mm, fit_mask
+
+
+def test_edge_divergence_fix_is_track_independent():
+    edge_tolerance_mm = 0.05
+    # ~44x span ratio, matching 01-11-DIAGNOSIS.md's measured raw-span ratio
+    # between track 10 (~0.88mm) and tracks 8/14/21 (~0.01-0.02mm).
+    big_amplitude_mm = 0.5
+    small_amplitude_mm = big_amplitude_mm / 44.0
+
+    for label, amplitude_mm in (("big", big_amplitude_mm), ("small", small_amplitude_mm)):
+        Z_mm, x_mm, y_mm, fit_mask = _edge_divergence_scenario(amplitude_mm)
+
+        residual_fixed, coef_fixed = nsf_fmrg_data.robust_plane_detrend(
+            Z_mm, x_mm, y_mm,
+            order=targets.DETREND_POLY_ORDER,
+            fit_mask=fit_mask,
+            max_y_degree=targets.DETREND_MAX_Y_DEGREE,
+        )
+        require(coef_fixed is not None, f"{label}: the fixed fit must succeed")
+        fitted_fixed = Z_mm - residual_fixed
+        profile_fixed = np.median(fitted_fixed, axis=1)
+        mid = len(profile_fixed) // 2
+        require(
+            abs(profile_fixed[0] - profile_fixed[mid]) <= edge_tolerance_mm,
+            f"{label}: the shared DETREND_MAX_Y_DEGREE constant must clear the y=0 tolerance",
+        )
+        require(
+            abs(profile_fixed[-1] - profile_fixed[mid]) <= edge_tolerance_mm,
+            f"{label}: the shared DETREND_MAX_Y_DEGREE constant must clear the y=N tolerance",
+        )
+
+    # The fix is only load-bearing at the large (track-10-like) magnitude:
+    # the small (track-8/14/21-like) magnitude already clears the tolerance
+    # even with today's uncapped order=4-in-y fit, proving DETREND_MAX_Y_DEGREE
+    # is a relative, structural correction rather than a value tuned to one
+    # track's absolute scale.
+    Z_big, x_mm, y_mm, fit_mask_big = _edge_divergence_scenario(big_amplitude_mm)
+    residual_uncapped, coef_uncapped = nsf_fmrg_data.robust_plane_detrend(
+        Z_big, x_mm, y_mm, order=targets.DETREND_POLY_ORDER, fit_mask=fit_mask_big,
+    )
+    require(coef_uncapped is not None, "the uncapped big-amplitude fit must succeed")
+    fitted_uncapped = Z_big - residual_uncapped
+    profile_uncapped = np.median(fitted_uncapped, axis=1)
+    mid = len(profile_uncapped) // 2
+    require(
+        abs(profile_uncapped[0] - profile_uncapped[mid]) > edge_tolerance_mm,
+        "the uncapped fit must still manufacture an edge feature at the large magnitude, "
+        "confirming the fix (not the scenario) is what clears the tolerance there",
+    )
+
+
 def test_extraction_params_provenance():
     expected = {
         "TARGET_GRID_START_MM": 20.1,
@@ -360,9 +444,10 @@ def test_extraction_params_provenance():
         "DETREND_POLY_ORDER": 4,
         "MAX_TRACKING_GAP_COLUMNS": 10,
         "BEAD_MASK_HEIGHT_FRACTION": 0.5,
+        "DETREND_MAX_Y_DEGREE": 2,
     }
 
-    require(targets.extraction_params() == expected, "the exact 15-value extraction parameterization changed")
+    require(targets.extraction_params() == expected, "the exact 16-value extraction parameterization changed")
 
 
 def test_provenance_includes_tracking_gap_and_fix_param():
@@ -406,6 +491,14 @@ def test_provenance_digest_is_change_sensitive():
     finally:
         targets.BEAD_MASK_HEIGHT_FRACTION = original_fraction
     require(digest() == baseline, "restoring BEAD_MASK_HEIGHT_FRACTION must restore the baseline digest")
+
+    original_max_y_degree = targets.DETREND_MAX_Y_DEGREE
+    try:
+        targets.DETREND_MAX_Y_DEGREE = 999
+        require(digest() != baseline, "mutating DETREND_MAX_Y_DEGREE must change the provenance digest")
+    finally:
+        targets.DETREND_MAX_Y_DEGREE = original_max_y_degree
+    require(digest() == baseline, "restoring DETREND_MAX_Y_DEGREE must restore the baseline digest")
 
 
 def test_post_smoothing_crossing_is_invalidated():
@@ -507,6 +600,7 @@ if __name__ == "__main__":
         test_nan_savgol_track10_crop_edge_regression,
         test_single_parameterization_has_no_track_conditionals,
         test_track_id_does_not_affect_numeric_output,
+        test_edge_divergence_fix_is_track_independent,
         test_extraction_params_provenance,
         test_provenance_includes_tracking_gap_and_fix_param,
         test_provenance_digest_is_change_sensitive,

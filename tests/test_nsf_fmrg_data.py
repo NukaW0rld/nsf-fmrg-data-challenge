@@ -11,6 +11,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.append(str(SRC_DIR))
 
 import nsf_fmrg_data
+import targets
 
 
 def require(condition, message):
@@ -149,6 +150,117 @@ def test_polynomial_basis_sizes_are_stable():
     require(len(coef_order_one) == 3, "order=1 must use the legacy 3-term basis")
     require(len(coef_order_four) == 15, "order=4 must use a 15-term total-degree basis")
 
+    _, coef_order_four_capped = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm, order=4, max_y_degree=2
+    )
+    require(
+        len(coef_order_four_capped) == 12,
+        "order=4 with max_y_degree=2 must drop the three cross-track-degree-3/4 terms (12-term basis)",
+    )
+
+
+def test_detrend_edge_fix_preserves_default_behavior():
+    # Amendment A5: the max_y_degree keyword must be off by default, so every
+    # other caller (order=1 affine path, notebooks, diagnose_width_regression.py's
+    # historical rows) is bit-for-bit unchanged.
+    x_mm, y_mm, x_grid, y_grid = synthetic_grid()
+    centered_x = (x_grid - 60.0) / 40.0
+    Z_mm = 0.003 * x_grid - 0.02 * y_grid + 0.7 + (
+        0.08 * centered_x**4 - 0.03 * centered_x**2
+    )
+
+    for order in (1, 4):
+        residual_omitted, coef_omitted = nsf_fmrg_data.robust_plane_detrend(
+            Z_mm, x_mm, y_mm, order=order
+        )
+        residual_explicit_none, coef_explicit_none = nsf_fmrg_data.robust_plane_detrend(
+            Z_mm, x_mm, y_mm, order=order, max_y_degree=None
+        )
+        require(
+            np.array_equal(residual_omitted, residual_explicit_none, equal_nan=True),
+            f"order={order}: omitting max_y_degree must match max_y_degree=None bit-for-bit",
+        )
+        require(
+            np.array_equal(coef_omitted, coef_explicit_none),
+            f"order={order}: coefficients must match bit-for-bit between omitted and explicit-None max_y_degree",
+        )
+
+    _, coef_default = nsf_fmrg_data.robust_plane_detrend(Z_mm, x_mm, y_mm, order=4)
+    require(
+        len(coef_default) == 15,
+        "the default (max_y_degree=None) must use the full 15-term order=4 basis, not a silently-capped one",
+    )
+
+
+def _track10_shaped_edge_scenario(shelf_amplitude_mm):
+    # Track-10-shaped synthetic grid: long along-track extent, short
+    # cross-track strip (480 samples matching the measured Wyko y_size), a
+    # smooth low-order substrate warp, a bounded near-edge shelf feature
+    # (the kind of genuine, localized substrate structure a degree-4-in-y
+    # basis over a ~1.9mm strip can only represent by ringing/extrapolating,
+    # producing a much larger edge departure than a lower-degree fit would),
+    # and an interior bead well clear of both edges, masked from the fit
+    # exactly as the production path masks it.
+    x_mm = np.linspace(20.0, 100.0, 2000)
+    y_mm = np.linspace(0.0, 1.911, 480)
+    x_grid, y_grid = np.meshgrid(x_mm, y_mm)
+
+    centered_x = (x_grid - 60.0) / 40.0
+    centered_y = (y_grid - 0.9555) / 0.9555
+    substrate = 0.02 * centered_x - 0.01 * centered_y + 0.05
+
+    shelf_frac = 0.06
+    edge_band = y_mm < shelf_frac * y_mm[-1]
+    shelf = np.zeros_like(y_grid)
+    shelf[edge_band] = shelf_amplitude_mm * (1.0 - y_grid[edge_band] / (shelf_frac * y_mm[-1]))
+    Z_mm = substrate + shelf
+
+    bead_rows = (y_grid >= 0.8) & (y_grid <= 1.1)
+    Z_mm = Z_mm.copy()
+    Z_mm[bead_rows] += 0.2
+    fit_mask = np.ones(Z_mm.shape, dtype=bool)
+    fit_mask[bead_rows] = False
+    return Z_mm, x_mm, y_mm, fit_mask
+
+
+def _fitted_surface_edge_departures(Z_mm, x_mm, y_mm, fit_mask, max_y_degree):
+    residual, coef = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm, order=4, fit_mask=fit_mask, max_y_degree=max_y_degree
+    )
+    require(coef is not None, "the scenario must produce a valid fit")
+    fitted = Z_mm - residual
+    profile = np.median(fitted, axis=1)
+    mid = len(profile) // 2
+    return abs(profile[0] - profile[mid]), abs(profile[-1] - profile[mid])
+
+
+def test_detrend_does_not_diverge_at_strip_edge():
+    # 01-11-CRITERION.md's tolerance: the fitted surface's edge value must
+    # stay within 0.05 mm of its own interior midpoint.
+    edge_tolerance_mm = 0.05
+    Z_mm, x_mm, y_mm, fit_mask = _track10_shaped_edge_scenario(shelf_amplitude_mm=0.5)
+
+    default_y0, default_yN = _fitted_surface_edge_departures(
+        Z_mm, x_mm, y_mm, fit_mask, max_y_degree=None
+    )
+    require(
+        default_y0 > edge_tolerance_mm,
+        "an uncapped order=4-in-y masked detrend must manufacture an edge feature "
+        "the synthetic substrate does not itself contain, exceeding the criterion's tolerance",
+    )
+
+    fixed_y0, fixed_yN = _fitted_surface_edge_departures(
+        Z_mm, x_mm, y_mm, fit_mask, max_y_degree=targets.DETREND_MAX_Y_DEGREE
+    )
+    require(
+        fixed_y0 <= edge_tolerance_mm,
+        "the selected fix must bring the y=0 edge departure within the criterion's tolerance",
+    )
+    require(
+        fixed_yN <= edge_tolerance_mm,
+        "the selected fix must bring the y=N edge departure within the criterion's tolerance",
+    )
+
 
 def test_find_track_file_rejects_unanchored_substring_match():
     with tempfile.TemporaryDirectory() as tmp:
@@ -244,6 +356,8 @@ if __name__ == "__main__":
         test_degenerate_fallback_is_preserved_for_all_orders,
         test_polynomial_basis_sizes_are_stable,
         test_robust_plane_detrend_fit_mask_excludes_bead_from_fit,
+        test_detrend_edge_fix_preserves_default_behavior,
+        test_detrend_does_not_diverge_at_strip_edge,
         test_find_track_file_rejects_unanchored_substring_match,
         test_find_track_file_still_resolves_real_dataset_names,
         test_height_map_loader_raises_value_error_when_unresolved,
