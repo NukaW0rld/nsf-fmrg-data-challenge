@@ -21,6 +21,9 @@ from run_target_extraction import resolve_raw_dir, resolve_repository_root
 EXPECTED_KEYS = {"x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm", "valid_mask"}
 FLOAT_KEYS = ("x_grid_mm", "w_mm", "y_upper_mm", "y_lower_mm")
 EXPECTED_SHAPE = (400,)
+# Deliberately just below the height maps' measured cross-track extent
+# (y_size * pixel_size_mm = 480 * 0.003982 mm = 1.91136 mm for all four
+# current Heightmap_*.ASC headers), leaving interpolation margin.
 Y_STRIP_EXTENT_MM = 1.907
 # Locked minimum usable coverage per decision U-02: one project-wide floor,
 # no per-track allowance or exemption.

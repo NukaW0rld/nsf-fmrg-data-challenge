@@ -10,6 +10,10 @@ COMMON_X_END_MM = 100.0
 THERMAL_FPS = 50.0
 SCAN_SPEED_MM_PER_S = 10.0
 THERMAL_MM_PER_FRAME = SCAN_SPEED_MM_PER_S / THERMAL_FPS
+# find_thermal_array's candidate-scoring heuristic below biases toward arrays
+# whose shape already contains this same frame count (400); a future change
+# to the scan-geometry constants above that shifts this value also shifts
+# that heuristic's intent.
 EXTRACTED_THERMAL_FRAMES = int(round((COMMON_X_END_MM - COMMON_X_START_MM) / THERMAL_MM_PER_FRAME))
 
 
@@ -213,7 +217,7 @@ def load_wyko_asc(height_dir, track_id, crop_to_common=True):
     }
 
 
-def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit_mask=None):
+def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit_mask=None, max_y_degree=None):
     Zs = Z_mm[::stride_y, ::stride_x]
     xs = x_mm[::stride_x]
     ys = y_mm[::stride_y]
@@ -228,11 +232,15 @@ def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit
 
     if not isinstance(order, (int, np.integer)) or order < 0:
         raise ValueError('order must be a non-negative integer.')
+    if max_y_degree is not None and (not isinstance(max_y_degree, (int, np.integer)) or max_y_degree < 0):
+        raise ValueError('max_y_degree must be a non-negative integer or None.')
     exponents = [
         (i, degree - i)
         for degree in range(order + 1)
         for i in range(degree + 1)
     ]
+    if max_y_degree is not None:
+        exponents = [(i, j) for i, j in exponents if j <= max_y_degree]
     x_center = 0.5 * (x_mm[0] + x_mm[-1])
     y_center = 0.5 * (y_mm[0] + y_mm[-1])
     Xs_centered = Xs - x_center

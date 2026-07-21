@@ -27,6 +27,18 @@ DETREND_POLY_ORDER = 4
 # convention is, by that same definition, not background, so it must not be
 # allowed to bias the fitted surface. Not chosen from the resulting ordering.
 BEAD_MASK_HEIGHT_FRACTION = HALF_MAX_FRACTION
+# Amendment A5: fixed a priori after 01-11-CRITERION.md's committed criterion
+# established (by measurement, not by the resulting ordering) that Candidate
+# A (basis conditioning) cannot change the least-squares fit at all -- column
+# rescaling does not change a full-rank linear regression's fitted surface --
+# and its own fallback provision selected Candidate B instead. 2 is the
+# LARGEST cross-track degree cap that clears the criterion's 0.05 mm
+# fitted-surface edge-vs-midpoint tolerance on all four tracks (01-11-
+# DIAGNOSIS.md measurements): cap 3 leaves one track's edge departure at
+# 0.0665 mm, still above tolerance, while cap 2 brings every track's largest
+# edge departure to 0.0238 mm, comfortably under. Preserves the maximum
+# cross-track fitting capacity that still satisfies the criterion.
+DETREND_MAX_Y_DEGREE = 2
 
 TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
 TRACK_IDS = tuple(TRACK_POWER_W)
@@ -53,6 +65,7 @@ def extraction_params():
         'DETREND_POLY_ORDER': DETREND_POLY_ORDER,
         'MAX_TRACKING_GAP_COLUMNS': MAX_TRACKING_GAP_COLUMNS,
         'BEAD_MASK_HEIGHT_FRACTION': BEAD_MASK_HEIGHT_FRACTION,
+        'DETREND_MAX_Y_DEGREE': DETREND_MAX_Y_DEGREE,
     }
 
 
@@ -298,6 +311,7 @@ def extract_track_targets(height_dir, track_id):
         data['y_mm'],
         order=DETREND_POLY_ORDER,
         fit_mask=fit_mask,
+        max_y_degree=DETREND_MAX_Y_DEGREE,
     )
     if coef is None:
         raise ValueError(f'Plane detrending failed for {expected_name}.')
