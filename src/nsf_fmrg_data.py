@@ -113,6 +113,11 @@ def detect_laser_on_interval(frames):
 
 def extract_final_thermal_frames(thermal_dir, track_id):
     path = find_track_file(thermal_dir, track_id, ['.mat'])
+    if not path:
+        raise ValueError(f'No thermal file found for track {track_id} under {thermal_dir}.')
+    expected_name = f'Thermal_{track_id}.mat'
+    if Path(path).name != expected_name:
+        raise ValueError(f'Expected {expected_name}, resolved {Path(path).name}.')
     mat = _loadmat_any(path)
     frames, key = find_thermal_array(mat)
     on_start, on_stop, score, threshold = detect_laser_on_interval(frames)
@@ -132,6 +137,10 @@ def extract_final_thermal_frames(thermal_dir, track_id):
 
 def get_sem_tile_paths(sem_dir, track_id):
     root = Path(sem_dir) / f'SEM_{track_id}' / 'PlainImages'
+    if not root.is_dir():
+        raise ValueError(f'Expected SEM directory {root} for track {track_id}.')
+    if root.is_symlink() or root.parent.is_symlink():
+        raise ValueError(f'SEM path must not be a symlink: {root}.')
     suffixes = {'.tif', '.tiff', '.png', '.jpg', '.jpeg'}
     files = [p for p in root.iterdir() if p.is_file() and p.suffix.lower() in suffixes]
     return sorted(files, key=natural_key)

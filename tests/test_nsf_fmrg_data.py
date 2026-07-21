@@ -185,6 +185,58 @@ def test_height_map_loader_raises_value_error_when_unresolved():
             raise AssertionError("load_wyko_asc must raise ValueError when no file resolves")
 
 
+def test_thermal_loader_rejects_unresolved_or_mismatched_filename():
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            nsf_fmrg_data.extract_final_thermal_frames(tmp, 8)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                "extract_final_thermal_frames must raise ValueError on an empty directory"
+            )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'Track_8_data.mat').write_bytes(b"")
+        try:
+            nsf_fmrg_data.extract_final_thermal_frames(root, 8)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                "extract_final_thermal_frames must raise ValueError on a mismatched basename"
+            )
+
+
+def test_sem_tile_paths_rejects_missing_or_symlinked_track_directory():
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            nsf_fmrg_data.get_sem_tile_paths(tmp, 8)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                "get_sem_tile_paths must raise ValueError when SEM_{track_id} is absent"
+            )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        real_plain_images = root / 'SEM_10' / 'PlainImages'
+        real_plain_images.mkdir(parents=True)
+        (real_plain_images / 'tile_0.png').write_bytes(b"")
+        (root / 'SEM_8').symlink_to(root / 'SEM_10', target_is_directory=True)
+        try:
+            nsf_fmrg_data.get_sem_tile_paths(root, 8)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                "get_sem_tile_paths must raise ValueError for a symlinked track directory, "
+                "not silently return another track's tiles"
+            )
+
+
 if __name__ == "__main__":
     tests = [
         test_default_order_removes_affine_surface,
@@ -195,6 +247,8 @@ if __name__ == "__main__":
         test_find_track_file_rejects_unanchored_substring_match,
         test_find_track_file_still_resolves_real_dataset_names,
         test_height_map_loader_raises_value_error_when_unresolved,
+        test_thermal_loader_rejects_unresolved_or_mismatched_filename,
+        test_sem_tile_paths_rejects_missing_or_symlinked_track_directory,
     ]
     for test in tests:
         test()
