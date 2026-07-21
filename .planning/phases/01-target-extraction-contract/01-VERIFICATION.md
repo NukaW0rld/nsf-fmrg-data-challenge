@@ -1,190 +1,159 @@
 ---
 phase: 01-target-extraction-contract
-verified: 2026-07-20T22:10:00Z
-status: gaps_found
-score: 5/7 must-haves verified
+verified: 2026-07-21T18:30:00Z
+status: human_needed
+score: 4/6 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
-  previous_score: 24/27
+  previous_score: 5/7
   gaps_closed:
-    - "The full extraction contract is now reproducibly documented: MAX_TRACKING_GAP_COLUMNS and the new BEAD_MASK_HEIGHT_FRACTION are both in extraction_params() (15 keys), persisted in extraction_params.json, and the SHA-256 provenance digest is change-sensitive to both (tests/test_targets.py::test_provenance_includes_tracking_gap_and_fix_param, test_provenance_digest_is_change_sensitive)."
-    - "Amendment A4 canonicalizes the plan-01-05 continuity/stale-history rule and the plan-01-07 bead-mask fix in 01-CONTEXT.md, in the same style as Amendment A3."
-    - "The bead-masking fix (Amendment A4) was applied via the plan-01-06 pre-registered, outcome-independent, residual/physical criterion — not chosen or tuned to make the ordering pass — and is uniform across all 4 tracks (grep for 'track_id ==' in src/targets.py, src/nsf_fmrg_data.py, and scripts/run_target_extraction.py returns nothing)."
+    - "check_targets.py now fails closed on coverage violations via a hard MIN_VALID_FRACTION=0.5 require() gate (01-10) — confirmed live: exit 0 today only because all 4 tracks clear >=60.5% coverage; previously exit 0 was printed even at track 10's 5.2% coverage."
+    - "Publish-path symlink exploit (CR-03) is closed: reject_symlink_path() rejects a symlinked candidate or in-repo symlinked ancestor before any resolve/rmtree/rename, and publish_staging_dir() re-checks is_symlink() immediately before every destructive op (01-10) — 4 dedicated regression tests pass (test_symlink_at_backup_path_is_rejected, test_symlink_at_processed_data_is_rejected, test_publish_refuses_symlinked_backup_immediately_before_rmtree, test_symlink_output_into_raw_is_rejected)."
+    - "Track 10's catastrophic coverage collapse (21/400, 5.2%) is diagnosed as a detrend-fitting edge artifact and fixed via Amendment A5 (DETREND_MAX_Y_DEGREE=2, 01-11), restoring track 10 to 242/400 (60.5%) — a representative, non-degenerate sample, no longer failing check_targets.py's coverage gate."
   gaps_remaining:
-    - "The roadmap's required width ordering 8 > 10 > 14 > 21 is still not achieved: 8-vs-10 and 14-vs-21 PASS, but 10-vs-14 FLAGs (track 10 median 0.2509 mm < track 14 median 0.5264 mm)."
-    - "Visual QA sign-off on the regenerated residual/overlay/width figures (Human Verification items #1-#3 from the prior VERIFICATION.md) is still outstanding — plan 01-08 explicitly recommended holding sign-off pending the human override-vs-diagnose decision."
+    - "The 10-vs-14 width-ordering pair still FLAGs even after track 10's coverage fix (0.3713mm vs 0.4765mm, per 01-11-ORDERING-OUTCOME.md) — this is reclassified below from a code-level FAILED gap to a human override-vs-investigate decision, since two independent, honest diagnostic/fix cycles (01-06/07/08 and 01-11) have already been run against this exact defect class without forcing the outcome."
+    - "Visual sign-off on all 12 regenerated QA figures has not occurred — 01-SIGNOFF-REQUEST.md exists, is actionable, and has 0 ticked checkboxes."
   regressions: []
-gaps:
-  - truth: "Running the extractor on all 4 tracks produces a w_i(x) curve per track showing the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21)."
-    status: failed
-    reason: "scripts/check_targets.py (re-run live during this verification) reports track medians 8=0.7411mm, 10=0.2509mm, 14=0.5264mm, 21=0.2412mm. 8-vs-10 PASS, 14-vs-21 PASS, but 10-vs-14 FLAGs — the full chain does not hold. This is the same regression already diagnosed in 01-06-DIAGNOSIS.md and reported honestly, unresolved, in 01-08-ORDERING-OUTCOME.md. Root cause (independently confirmed by this verification's visual inspection of track_10_overlay.png): track 10's bead sits at/beyond the y-strip edge for nearly the entire track length, so the boundary-clipped-run exclusion (correct in isolation, per D-01/D-03) discards 267/400 (66.75%) of its columns, collapsing its valid fraction to 5.2% (21/400) and making its median width unrepresentative."
-    artifacts:
-      - path: "processed_data/targets/track_10_targets.npz"
-        issue: "Only 21/400 (5.2%) grid slots are valid; median width computed from this small, non-representative sample is close to track 21's (lowest power) despite track 10 being the second-highest power track."
-      - path: "processed_data/targets/qa/track_10_overlay.png"
-        issue: "Visually confirmed during this verification: no visible upper/lower boundary trace across nearly the entire 20-100mm span — the extraction produced almost no usable boundary for this track."
-    missing:
-      - "A separate, principled (non-outcome-driven) diagnosis and fix for track 10's edge-clipped bead, OR an explicit human override of the roadmap ordering criterion with documented rationale (per 01-08-ORDERING-OUTCOME.md's two escalation options (a)/(b))."
-  - truth: "QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps)."
-    status: failed
-    reason: "All 12 QA PNGs exist and were visually inspected directly during this verification (not merely claimed). Track 8, 14, and 21 overlays show a continuous, physically plausible boundary trace with masked (gray-shaded) gaps handled explicitly, not silently. Track 10's overlay shows no visible boundary trace across nearly the entire track — the QA plot is not 'visually confirmed sane' for one of the four required tracks. Additionally, human sign-off on the regenerated figures was never completed: 01-08-ORDERING-OUTCOME.md explicitly recommends holding VERIFICATION.md Human Verification items #1-#3 open pending the track-10/override decision, and no UAT or CONTEXT record documents that sign-off having since occurred."
-    artifacts:
-      - path: "processed_data/targets/qa/track_10_overlay.png"
-        issue: "No visible boundary trace for nearly the full 20-100mm span (consistent with the 5.2% valid fraction)."
-    missing:
-      - "Resolve the track 10 coverage collapse (see prior gap), then obtain explicit human visual sign-off on all 12 regenerated figures."
-  - truth: "check_targets.py fails closed (non-zero exit or hard error) when a persisted artifact violates the project's own coverage expectations, rather than reporting ALL CHECKS PASSED regardless."
-    status: failed
-    reason: "Independently reproduced during this verification by re-running scripts/check_targets.py against the current artifacts: it prints 'Track 10 valid fraction 5.2% is below 50% — FLAG' via a bare print() (scripts/check_targets.py:89-91) and then unconditionally prints 'ALL CHECKS PASSED'. The only hard gate on coverage is valid_count > 0 (line 87), so a track with 1 valid slot out of 400 would also pass. This is exactly how a 95%-invalid track (CR-01) went unnoticed by the automated contract checker this phase depends on for its 'reproducible, trusted' guarantee. Corroborates 01-REVIEW.md CR-02, independently re-verified live, not merely re-cited."
-    artifacts:
-      - path: "scripts/check_targets.py"
-        issue: "Lines 86-91: valid_fraction < 0.5 branch is a print, not a require(...); main() proceeds to print ALL CHECKS PASSED unconditionally."
-    missing:
-      - "Promote the low-coverage check to a hard failure (require(...)) with a project-chosen minimum coverage floor, or an explicit documented per-track allowance — not a silent print for every track."
-  - truth: "The publish path used to write processed_data/targets/ does not allow a pre-existing symlink to redirect a destructive delete outside the intended output tree."
-    status: failed
-    reason: "01-REVIEW.md CR-03 reproduced this exploit live in an isolated scratch repository: a symlink at processed_data/targets.previous pointing at src/ causes publish_staging_dir's shutil.rmtree(backup_dir) to delete src/ during a normal, successful run_pipeline() call, while the data/raw/ integrity audit correctly reports PASS (data/raw/ genuinely untouched). Source inspection during this verification confirms resolve_output_path (scripts/run_target_extraction.py:62-70) resolves symlinks via Path.resolve(strict=False) but never rejects a path that IS a symlink before use, and publish_staging_dir (scripts/run_target_extraction.py:294-306) calls shutil.rmtree(backup_dir) unconditionally once backup_dir exists. The existing regression tests/test_run_target_extraction.py::test_symlink_output_into_raw_is_rejected only covers a symlink pointing into data/raw, not one pointing at any other in-repository directory. This undermines the 'reproducible pipeline' trust the phase goal requires: any future run risks destroying an unrelated repository directory (e.g. src/, tests/, .git/) if a stray symlink exists at the backup path."
-    artifacts:
-      - path: "scripts/run_target_extraction.py"
-        issue: "resolve_output_path (lines 62-70) does not reject symlinks; publish_staging_dir (lines 294-306) rmtree's backup_dir without a symlink check immediately before deletion."
-    missing:
-      - "Reject symlinks outright at every output path the publisher touches (is_symlink() check before resolve/rmtree/rename), and add a regression that plants a symlink at targets.previous (and separately at processed_data) pointing at a harmless in-repo victim directory, asserting the victim survives run_pipeline."
+behavior_unverified_items: []
+human_verification:
+  - test: "Decide the 10-vs-14 width-ordering FLAG: accept it as a documented, known limitation (human override, 01-SIGNOFF-REQUEST.md option (a)) or commission a further diagnosed-defect investigation (option (b))."
+    expected: "A recorded decision. If (a): rationale recorded and carried as a caveat in ROADMAP.md/REQUIREMENTS.md before Phase 2 starts. If (b): a new gap-closure plan targeting the 10-vs-14 relationship specifically, without touching the now-resolved coverage fix."
+    why_human: "This is an explicit scientific/product judgment call the phase's own HONEST-OUTCOME GUARD defers to a human — the constants (DETREND_POLY_ORDER, BEAD_MASK_HEIGHT_FRACTION, MAX_TRACKING_GAP_COLUMNS, DETREND_MAX_Y_DEGREE) were each fixed from residual/physical/numerical evidence before this outcome was inspected, and the project has explicitly committed to not tuning further in response to the ordering result. No grep or test can decide whether the residual gap is acceptable."
+  - test: "Open all 12 regenerated QA figures under processed_data/targets/qa/ at full resolution (residual maps, boundary overlays, width curves for tracks 8/10/14/21) and answer the four questions in 01-SIGNOFF-REQUEST.md."
+    expected: "Residual structure is scientifically acceptable process/substrate variation on all 4 tracks; boundary overlays are continuous and physically plausible with explicit (not silently bridged) gap shading, including track 10; track 10's terminal V-spike from prior UAT is confirmed gone; the four locked constants are confirmed fixed independently of the ordering outcome."
+    why_human: "This verification's own visual inspection of track_10_overlay.png and track_10_width.png shows a real, continuous boundary trace across most of the 20-100mm span (a major improvement over the prior verification's near-total absence of trace), but the trace is visibly more jagged/spiky than tracks 8 and 21's, and the width curve degrades toward near-zero past x=70mm. Whether this level of noise is 'sane' (D-14 bow/curvature and sawtooth criteria) versus still-borderline is a domain judgment beyond what grep/structural checks can certify — exactly what 01-SIGNOFF-REQUEST.md asks a human to confirm."
 ---
 
 # Phase 1: Target Extraction & Contract Verification Report
 
 **Phase Goal:** A documented, reproducible local-width extraction method is specified and then implemented, and is visually validated against all 4 tracks before anything downstream trusts it as ground truth.
-**Verified:** 2026-07-20T22:10:00Z
-**Status:** gaps_found
-**Re-verification:** Yes — after gap-closure plans 01-06 (diagnosis), 01-07 (bead-mask fix + complete provenance), and 01-08 (regeneration + honest outcome report)
+**Verified:** 2026-07-21T18:30:00Z
+**Status:** human_needed
+**Re-verification:** Yes — full re-verification after 4 gap-closure plans (01-09, 01-10, 01-11, 01-12) landed since the 2026-07-20T22:10:00Z VERIFICATION.md (previous status: gaps_found, 5/7)
 
 ## Goal Achievement
 
 ### Observable Truths
 
-The four ROADMAP success criteria are the controlling contract, merged with the two provenance-completeness/no-tuning truths carried forward from the prior VERIFICATION.md's Gap 1 (now closed) and two new truths derived from this session's independently-reproduced code-review findings (CR-02, CR-03), which bear directly on "reproducible... before anything downstream trusts it."
+The four ROADMAP success criteria, merged with the two safety-net truths carried forward from the prior verification's CR-02/CR-03 findings (both bear directly on "reproducible... before anything downstream trusts it").
 
 | # | Truth | Status | Evidence |
 |---:|---|---|---|
-| 1 | The TARGET-01 contract (width definition, threshold rule, smoothing scale, 0.2mm grid, valid-coordinate mask, track-21 gap rule) is written and reviewed before extraction code is trusted | ✓ VERIFIED | D-01–D-16 in `01-CONTEXT.md`, plus canonical Amendments A1-A4 (A3: detrend order; A4: continuity tracking + bead-mask fix), all written and dated before/alongside the code that implements them. |
-| 2 | The complete current extraction contract is reproducibly documented and provenance-locked (Gap 1 from prior verification) | ✓ VERIFIED | `extraction_params()` now returns 15 keys including `MAX_TRACKING_GAP_COLUMNS` and `BEAD_MASK_HEIGHT_FRACTION` (confirmed live: `cat processed_data/targets/extraction_params.json`); `tests/test_targets.py::test_provenance_digest_is_change_sensitive` passes; Amendment A4 documents both mechanisms in `01-CONTEXT.md`. |
-| 3 | Running the extractor on all 4 tracks produces the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21) | ✗ FAILED | Live re-run of `scripts/check_targets.py`: 8=0.7411mm > 10=0.2509mm (PASS), 10=0.2509mm vs 14=0.5264mm (FLAG — inverted), 14=0.5264mm > 21=0.2412mm (PASS). Full chain does not hold. Root cause: track 10's bead sits at the y-strip edge, collapsing its valid fraction to 5.2% (21/400). |
-| 4 | QA plots overlay extracted width/boundary on raw+detrended maps for all 4 tracks, incl. track 21's gaps, and are visually confirmed sane | ✗ FAILED | Direct visual inspection during this verification: track 8, 14, 21 overlays show continuous, plausible boundary traces with explicitly gray-shaded (not silently dropped) gaps. Track 10's overlay shows essentially no visible boundary trace for nearly the full 20-100mm span. Human sign-off on regenerated figures also remains open per 01-08-ORDERING-OUTCOME.md's explicit recommendation. |
-| 5 | The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds (single shared parameterization) | ✓ VERIFIED | `grep -n "track_id ==" src/targets.py src/nsf_fmrg_data.py scripts/run_target_extraction.py` returns nothing; `tests/test_targets.py::test_single_parameterization_has_no_track_conditionals` and `test_track_id_does_not_affect_numeric_output` pass. |
-| 6 | The artifact/provenance checker (`check_targets.py`) fails closed when a persisted artifact violates the project's coverage expectations | ✗ FAILED | Live re-run: prints "Track 10 valid fraction 5.2% is below 50% — FLAG" then unconditionally "ALL CHECKS PASSED". Source: `scripts/check_targets.py:86-91` — the `<50%` branch is a `print`, not `require(...)`; only hard gate is `valid_count > 0`. |
-| 7 | The publish path cannot be redirected by a pre-existing symlink into destroying an unrelated repository directory | ✗ FAILED | `01-REVIEW.md` CR-03 reproduced live in an isolated scratch repo: symlink at `processed_data/targets.previous` -> `src/` causes `publish_staging_dir`'s `shutil.rmtree(backup_dir)` to delete `src/` during a normal successful run, while `data/raw/` integrity audit still reports PASS. Source inspection confirms `resolve_output_path` (`scripts/run_target_extraction.py:62-70`) never rejects symlinks before use. |
+| 1 | The TARGET-01 contract (width definition, threshold rule, smoothing scale, 0.2mm grid, valid-coordinate mask, track-21 gap rule) is written and reviewed before extraction code is trusted | ✓ VERIFIED | Unchanged since prior verification: D-01–D-16 in `01-CONTEXT.md`, plus Amendments A1-A5 (A5 added by 01-11), all written/dated before or alongside the code implementing them. |
+| 2 | Running the extractor on all 4 tracks produces the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21) | ? UNCERTAIN (human) | Live re-run of `scripts/check_targets.py --project_dir .` today: 8=0.7528mm > 10=0.3713mm (PASS), 10=0.3713mm vs 14=0.4765mm (FLAG), 14=0.4765mm > 21=0.1998mm (PASS). Track 10's coverage collapse that made its prior median unrepresentative is fixed (60.5% valid, up from 5.2%), and the 10-vs-14 gap narrowed substantially (0.2509→0.3713 vs 0.4765mm), but the chain still does not fully hold. Two independent, pre-registered, outcome-independent fix cycles have already targeted this defect class (01-06/07/08, then 01-11); the project's own HONEST-OUTCOME GUARD explicitly declines to chase this further with code and instead escalates to a human override-vs-investigate decision via `01-SIGNOFF-REQUEST.md`. Reclassified from FAILED to UNCERTAIN accordingly — see Human Verification #1. |
+| 3 | QA plots overlay extracted width/boundary on raw+detrended maps for all 4 tracks, incl. track 21's gaps, and are visually confirmed sane | ? UNCERTAIN (human) | All 12 QA PNGs regenerated 2026-07-21 and directly inspected during this verification. Track 8 and 21 show continuous, plausible boundary traces (as in the prior verification). Track 10's overlay now shows a real boundary trace across most of the 20-100mm span (a major change from the prior verification's near-total absence), but the trace is visibly noisier/more jagged than tracks 8/21, and its width curve degrades toward near-zero past x≈70mm. `01-SIGNOFF-REQUEST.md` was produced specifically to route this domain judgment to a human; 0/4 checkboxes ticked. Not FAILED (the artifact is no longer structurally broken) and not VERIFIED (visual sanity is an explicit human-only gate) — see Human Verification #2. |
+| 4 | The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds (single shared parameterization) | ✓ VERIFIED | `grep -n "track_id =="` over `src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py` returns nothing; `tests/test_targets.py::test_single_parameterization_has_no_track_conditionals`, `test_track_id_does_not_affect_numeric_output`, and (new) `test_edge_divergence_fix_is_track_independent` all pass. |
+| 5 | `check_targets.py` fails closed (non-zero exit / hard error) when a persisted artifact violates the project's own coverage expectations | ✓ VERIFIED | Prior verification's CR-02 gap is closed: `scripts/check_targets.py:100-104` now `require(valid_fraction >= MIN_VALID_FRACTION, ...)` (0.5), a hard `ValueError`-raising gate, not a `print`. Source inspection + live run confirmed. |
+| 6 | The publish path used to write `processed_data/targets/` cannot be redirected by a pre-existing symlink into a destructive delete outside the intended output tree | ✓ VERIFIED | Prior verification's CR-03 gap is closed: `reject_symlink_path()` (new in `scripts/run_target_extraction.py:62-73`) rejects a symlinked candidate or symlinked in-repo ancestor before any resolve; `publish_staging_dir()` (lines 309-329) re-checks `is_symlink()` immediately before every `rmtree`/`rename`. 4 dedicated regression tests pass, including the specific `targets.previous`-symlink scenario the prior review reproduced as a live exploit. |
 
-**Score:** 5/7 truths verified (0 present-but-behavior-unverified)
+**Score:** 4/6 truths verified (0 present-but-behavior-unverified; 2 routed to human judgment, not counted toward the verified score)
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `src/targets.py` | Shared extraction implementation incl. bead-mask fix | ✓ VERIFIED | `bead_exclusion_mask()` present and wired; 26 tests pass in `tests/test_targets.py`. |
-| `src/nsf_fmrg_data.py` | Configurable detrend with `fit_mask` support | ✓ VERIFIED | `fit_mask` keyword confirmed on `robust_plane_detrend`; 5 tests pass in `tests/test_nsf_fmrg_data.py`. |
-| `scripts/diagnose_width_regression.py` | Diagnostic sweep tool (plan 01-06) | ✓ VERIFIED | Committed; produces `width_regression_sweep.csv`, read-only against `data/raw/`. |
-| `processed_data/targets/track_{8,10,14,21}_targets.npz` | Regenerated fixed-grid curves under Amendment A4 | ✓ VERIFIED structurally, ✗ track 10 fails coverage | All 4 pass `check_targets.py`'s structural/dtype/mask checks; track 10 is 5.2% valid. |
-| `processed_data/targets/extraction_params.json` | Complete, change-sensitive provenance | ✓ VERIFIED | 15 keys, matches `extraction_params()` live. |
-| `processed_data/targets/manifest.json` | Same-run publication marker | ✓ VERIFIED | SHA-256 digest present, matches persisted params. |
-| `processed_data/targets/qa/*.png` | 12 regenerated QA images | ✓ EXIST, ✗ not fully sane / not signed off | All 12 present; track 8/14/21 visually sane on direct inspection; track 10 visually broken; human sign-off outstanding. |
-| `.planning/phases/01-target-extraction-contract/01-CONTEXT.md` | Amendments A1-A4 | ✓ VERIFIED | Amendment A4 present, documents both continuity tracking and the bead-mask fix. |
-| `.planning/phases/01-target-extraction-contract/01-08-ORDERING-OUTCOME.md` | Honest outcome report | ✓ VERIFIED | Reports the unresolved 10-vs-14 FLAG without any parameter change; `git diff --stat -- src/targets.py` empty per the report, `track_id ==` grep independently confirms no per-track branch. |
+| `src/targets.py` | Shared extraction implementation incl. bead-mask fix | ✓ VERIFIED | `bead_exclusion_mask()` present and wired; `tests/test_targets.py` — 27/27 PASS. |
+| `src/nsf_fmrg_data.py` | Configurable detrend with `fit_mask` + `max_y_degree` (Amendment A5) | ✓ VERIFIED | `robust_plane_detrend(..., fit_mask=..., max_y_degree=...)` confirmed; `tests/test_nsf_fmrg_data.py` — 12/12 PASS. |
+| `scripts/run_target_extraction.py` | Symlink-safe publish pipeline | ✓ VERIFIED | `reject_symlink_path`, re-checked `is_symlink()` guards present at every destructive op; `tests/test_run_target_extraction.py` — 14/14 PASS. |
+| `scripts/check_targets.py` | Hard coverage-floor gate + structural/provenance checks | ✓ VERIFIED | `MIN_VALID_FRACTION = 0.5` enforced via `require()`; live run exits 0 only because all 4 tracks now clear the floor. |
+| `scripts/diagnose_track10_coverage.py` | Committed, re-runnable coverage diagnostic (01-11) | ✓ EXISTS, ⚠️ diverges from production (see WR-01 below) | Present and runnable; its `production_residual_profile()` omits `max_y_degree=DETREND_MAX_Y_DEGREE`, so it reports track 10 at 5.25% valid while the real pipeline produces 60.5% — a diagnostic-staleness warning, not a phase-goal blocker. |
+| `scripts/diagnose_width_regression.py` | Diagnostic sweep tool (bead-mask axis added 01-09) | ✓ EXISTS, ⚠️ still diverges from production on `max_y_degree` (WR-02) | Bead-mask axis present and correct per WR-03 (prior review); `max_y_degree` axis still missing, so its "production-labeled" sweep row underreports track 10's width by ~48% relative to the live pipeline. |
+| `processed_data/targets/track_{8,10,14,21}_targets.npz` | Regenerated fixed-grid curves under Amendment A5 | ✓ VERIFIED | All 4 pass `check_targets.py`'s full structural/dtype/mask/coverage checks; valid fractions 91.0% / 60.5% / 75.0% / 81.3%. |
+| `processed_data/targets/extraction_params.json` / `manifest.json` | Complete, change-sensitive provenance | ✓ VERIFIED | 16 keys (added `DETREND_MAX_Y_DEGREE`); SHA-256 digest matches; `check_targets.py` cross-checks both live. |
+| `processed_data/targets/qa/*.png` | 12 regenerated QA images | ✓ EXIST, visual sanity ? UNCERTAIN | All 12 present and dated 2026-07-21 (post-Amendment-A5 regeneration); see Truth #3. |
+| `.planning/phases/01-target-extraction-contract/01-CONTEXT.md` | Amendments A1-A5 | ✓ VERIFIED | Amendment A5 present with the pre-registered criterion and evidence. |
+| `.planning/phases/01-target-extraction-contract/01-11-ORDERING-OUTCOME.md` | Honest outcome report | ✓ VERIFIED | Reports the still-unresolved 10-vs-14 FLAG; `git diff --stat -- src/targets.py src/nsf_fmrg_data.py scripts/check_targets.py` empty for the reporting commit; no per-track branch. |
+| `.planning/phases/01-target-extraction-contract/01-SIGNOFF-REQUEST.md` | Human sign-off handoff | ✓ VERIFIED | Exists, names all 12 figures with concrete acceptance questions, presents the override-vs-investigate choice without recommending one, 0/4 checkboxes ticked. |
+| `.planning/REQUIREMENTS.md` | TARGET-02 status corrected | ✓ VERIFIED | Reads "Awaiting human visual sign-off on regenerated QA figures — see `01-SIGNOFF-REQUEST.md`" with a dated correction note, not falsely marked `Complete`. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
-| `extract_track_targets()` | `bead_exclusion_mask()` | Computed per-track from raw `Z_mm`, passed as `fit_mask` | ✓ WIRED | `01-07-SUMMARY.md` D1/D2 regressions pass; confirmed present in `src/targets.py`. |
-| `robust_plane_detrend()` | least-squares fit | `fit_mask` excludes flagged pixels from fit, surface still subtracted from all pixels | ✓ WIRED | `test_robust_plane_detrend_fit_mask_excludes_bead_from_fit` passes. |
+| `extract_track_targets()` | `bead_exclusion_mask()` | Computed per-track from raw `Z_mm`, passed as `fit_mask` | ✓ WIRED | Unchanged, tests pass. |
+| `robust_plane_detrend()` | least-squares fit | `fit_mask` excludes bead pixels; `max_y_degree` caps cross-track polynomial degree (Amendment A5) | ✓ WIRED | `test_robust_plane_detrend_fit_mask_excludes_bead_from_fit`, `test_detrend_does_not_diverge_at_strip_edge`, `test_polynomial_basis_sizes_are_stable` all pass. |
 | `extraction_params()` | `extraction_params.json` / manifest SHA-256 | JSON dump + digest | ✓ WIRED | Live file inspection matches; digest change-sensitivity test passes. |
-| `run_target_extraction.py::publish_staging_dir` | `processed_data/targets/` | Rename staging -> live, rmtree backup | ⚠️ WIRED WITH SAFETY GAP | Functionally wired for the happy path; CR-03 shows it is unsafe against a pre-existing symlink at the backup path. |
-| `scripts/check_targets.py` | persisted NPZs | `np.load` + structural asserts | ⚠️ WIRED WITH GATING GAP | Structural checks are real and pass/fail correctly; the coverage-floor check is present but non-blocking (CR-02). |
+| `run_target_extraction.py::publish_staging_dir` | `processed_data/targets/` | Rename staging → live, rmtree backup, symlink-checked at every step | ✓ WIRED (safety gap closed) | Previously "WIRED WITH SAFETY GAP" (CR-03); now fully guarded — 4 dedicated symlink regression tests pass. |
+| `scripts/check_targets.py` | persisted NPZs | `np.load` + structural asserts + hard coverage-floor gate | ✓ WIRED (gating gap closed) | Previously "WIRED WITH GATING GAP" (CR-02); coverage check is now a `require()`, confirmed to actually block (exercised indirectly: the pre-fix track 10 state would have failed this gate; today's regenerated state passes it honestly). |
+| `find_track_file()` (thermal/height-map read path) | filesystem | `is_file()` match with no `is_symlink()` rejection | ⚠️ WIRED WITH LATENT GAP (WR-03, not a phase blocker) | Read-path symlink rejection exists for SEM tiles (`get_sem_tile_paths`) and the entire write path, but not for `find_track_file` itself — flagged by `01-REVIEW.md` as a real but currently non-misfiring gap given the 4-file real dataset. |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Target-contract regressions | `.venv/bin/python tests/test_targets.py` | 26 PASS, exit 0 | ✓ PASS |
-| Detrend regressions (incl. fit_mask) | `.venv/bin/python tests/test_nsf_fmrg_data.py` | 5 PASS, exit 0 | ✓ PASS |
-| Runner safety transitions | `.venv/bin/python tests/test_run_target_extraction.py` | 10 PASS, exit 0 (data/raw/ integrity PASS reported) | ✓ PASS |
-| Persisted artifact/provenance checker | `.venv/bin/python scripts/check_targets.py --project_dir .` | Structural checks pass; 10-vs-14 ordering FLAG; unconditional "ALL CHECKS PASSED" | ⚠️ PARTIAL (see gap 3/CR-02) |
+| Target-contract regressions | `.venv/bin/python tests/test_targets.py` | 27 PASS, 0 FAIL | ✓ PASS |
+| Detrend + loader regressions | `.venv/bin/python tests/test_nsf_fmrg_data.py` | 12 PASS, 0 FAIL | ✓ PASS |
+| Runner safety + symlink regressions | `.venv/bin/python tests/test_run_target_extraction.py` | 14 PASS, 0 FAIL (incl. `data/raw/` integrity PASS on every real-data run) | ✓ PASS |
+| Persisted artifact/provenance/coverage checker | `.venv/bin/python scripts/check_targets.py --project_dir .` | Structural + provenance + coverage-floor checks all pass; ordering FLAG on 10-vs-14 printed as diagnostic, not gated; exit 0 | ✓ PASS (coverage gate now blocking; ordering FLAG intentionally non-blocking per design) |
 | No per-track branching | `grep -n "track_id ==" src/targets.py src/nsf_fmrg_data.py scripts/run_target_extraction.py` | No matches | ✓ PASS |
-| Direct visual inspection of QA overlays | Read `track_10_overlay.png`, `track_14_overlay.png`, `track_21_overlay.png` | Track 14/21 show continuous boundary traces with explicit gap shading; Track 10 shows almost no boundary trace | ⚠️ MIXED (3/4 sane, 1/4 broken) |
+| `data/raw/` untouched by any phase-1 code path | `git log --oneline -- data/raw` shows only the original data-tracking commit; runner's own audit prints `PASS` on every run | Unmodified since original commit; runner-internal audit consistently PASS | ✓ PASS (note: `data/raw/` itself IS committed to git via a prior, out-of-phase commit — a Phase 5 SUBMIT-01/02 concern per ROADMAP, not a Phase 1 must-have; flagged for awareness, not scored here) |
 
 ### Probe Execution
 
-No probe scripts declared and no conventional `scripts/*/tests/probe-*.sh` files exist.
+No probe scripts declared in any Phase 1 plan and no conventional `scripts/*/tests/probe-*.sh` files exist.
 
 ### Requirements Coverage
 
 | Requirement | Source Plans | Description | Status | Evidence |
 |---|---|---|---|---|
-| TARGET-01 | 01-01, 01-03, 01-04, 01-05, 01-07 | Contract specified/documented before extraction code trusted, single shared parameterization | ✓ SATISFIED for documentation/reproducibility; the contract itself (D-01–D-16, A1-A4) is complete, provenance-locked, and applied uniformly. | `01-CONTEXT.md`, `extraction_params.json`, no per-track branches. |
-| TARGET-02 | 01-01 through 01-08 | Extractor implements the contract and is visually QA'd against all 4 tracks before being trusted downstream | ✗ BLOCKED | Track 10's artifact is 95% invalid; the ordering criterion (an explicit part of the roadmap's definition of "trusted downstream") is not met; human visual sign-off is still outstanding. |
+| TARGET-01 | 01-01, 01-03, 01-04, 01-05, 01-07, 01-10, 01-11 | Contract specified/documented before extraction code trusted, single shared parameterization | ✓ SATISFIED | `01-CONTEXT.md` (D-01–D-16, A1-A5), `extraction_params.json` (16 keys), no per-track branches; `REQUIREMENTS.md` marks this `[x] Complete`, consistent with this verification. |
+| TARGET-02 | 01-01 through 01-12 | Extractor implements the contract and is visually QA'd against all 4 tracks before being trusted downstream | ? NEEDS HUMAN | Coverage collapse (the structural blocker from the prior verification) is fixed; both remaining criteria (width-ordering acceptance, visual figure sign-off) are explicitly human-only decisions per `01-SIGNOFF-REQUEST.md`. `REQUIREMENTS.md` correctly reflects this as "Awaiting human visual sign-off," not `Complete` — consistent with this verification. |
 
-Every requirement ID declared across all 8 plans (`requirements:` frontmatter) is `TARGET-01` and/or `TARGET-02`; both are present in `REQUIREMENTS.md`. No orphaned requirement IDs for this phase. Note: `REQUIREMENTS.md` currently marks both TARGET-01 and TARGET-02 as `[x]` complete and the traceability table as "Complete" — this verification finds TARGET-02 not yet satisfied; the requirements table should be corrected pending resolution of the gaps below.
+Every requirement ID declared across all 12 plans (`requirements:` frontmatter) is `TARGET-01` and/or `TARGET-02`; both are present in `REQUIREMENTS.md`. No orphaned requirement IDs for this phase.
 
 ### Prohibitions
 
 | Prohibition | Tier | Status | Evidence |
 |---|---|---|---|
-| No outcome-driven per-track tuning of extraction constants | judgment | ✓ VERIFIED | `01-08-ORDERING-OUTCOME.md` reports the unresolved ordering with `git diff --stat -- src/targets.py` empty; no per-track branch found by direct grep; the pre-registered 01-06 criterion (residual/physical, not ordering-outcome) was followed for the bead-mask fix, independently corroborated by Amendment A4's text. |
-| No writes/deletes/modifications under `data/raw/` | test | ✓ VERIFIED | `snapshot_raw`/`raw_snapshot_diff` audits pass in all 10 runner tests; `data/raw/ integrity PASS` printed on every live run observed during this verification. |
-| Output publication must not permit destructive operations outside the intended output tree | test | ✗ UNVERIFIED / FLAGGED | CR-03 (reproduced live in `01-REVIEW.md`, independently corroborated by source inspection here) shows the publish path is exploitable via a pre-existing symlink at the backup path. No test-tier enforcement exists for this specific vector; flagged per the fail-closed default for an unresolved test-tier prohibition — this is not a silently-passed item. |
+| No outcome-driven per-track tuning of extraction constants | judgment | ✓ VERIFIED | `01-11-ORDERING-OUTCOME.md` reports the still-unresolved ordering with `git diff --stat` empty for the reporting commit; `01-11-CRITERION.md` pre-registered the fix-selection tolerance and candidate mechanisms before any source change existed; Candidate A was rejected by a priori measurement (not by its effect on the ordering); no per-track branch found by direct grep. |
+| No writes/deletes/modifications under `data/raw/` | test | ✓ VERIFIED | `snapshot_raw`/`raw_snapshot_diff` audits pass in all 14 runner tests; `data/raw/ integrity PASS` printed on every live run observed during this verification. |
+| Output publication must not permit destructive operations outside the intended output tree | test | ✓ VERIFIED (was UNVERIFIED/FLAGGED in prior verification) | CR-03 is closed: `reject_symlink_path()` + per-step `is_symlink()` re-checks close the exploit `01-REVIEW.md` previously reproduced live; 4 dedicated regression tests pass, including the exact `targets.previous`-symlink scenario. |
 
 ### Anti-Patterns and Review Findings
 
-No `TBD`, `FIXME`, `XXX`, or `HACK` debt markers found in phase source/script files (`src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py`, `scripts/check_targets.py`, `scripts/diagnose_width_regression.py`).
+No `TBD`, `FIXME`, `XXX`, `TODO`, `HACK`, or placeholder-language markers found in any phase source/script file (`src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py`, `scripts/check_targets.py`, `scripts/diagnose_width_regression.py`, `scripts/diagnose_track10_coverage.py`).
 
-| Finding | Independent evidence (this verification) | Disposition |
+A fresh, independent code review (`01-REVIEW.md`, 2026-07-21T17:19:38Z) re-verified the three prior CRITICALs as genuinely fixed against real data and real pipeline execution (not just re-cited), and surfaced 6 new WARNINGs + 2 INFO items — none rise to blocker severity per the review's own classification, since none produce wrong targets in the shipped production pipeline:
+
+| Finding | Severity | Disposition |
 |---|---|---|
-| Track 10's persisted artifact is 95% invalid (CR-01) | Re-ran `check_targets.py` live: 21/400 valid; visually confirmed via `track_10_overlay.png` (no boundary trace across nearly the full span) | 🛑 BLOCKER — directly causes gap 1 above (ordering) and gap 2 (QA sanity). |
-| `check_targets.py` does not fail closed on catastrophic coverage loss (CR-02) | Re-ran live: "ALL CHECKS PASSED" printed alongside the 5.2% FLAG; source line-by-line confirms the branch is a `print`, not `require` | 🛑 BLOCKER — the automated gate this phase's "trusted downstream" promise relies on is misleading by design. |
-| Publish-path symlink exploit deletes arbitrary in-repo directories (CR-03) | Source inspection confirms `resolve_output_path` never rejects symlinks; exploit was independently reproduced (not just re-cited) in `01-REVIEW.md` this session | 🛑 BLOCKER — undermines "reproducible pipeline... before anything downstream trusts it," since any future run risks destroying repository state. |
-| `find_track_file`'s regex boundary protection is a no-op (WR-01) | Not independently re-verified this session; carried forward from `01-REVIEW.md` | ⚠️ Warning — latent risk, does not currently misfire with the 4-file dataset. |
-| No exact-filename safety check for thermal/SEM loaders (WR-02) | Carried forward from `01-REVIEW.md`, not independently re-verified | ⚠️ Warning — outside this phase's height-map-specific scope but relevant to overall pipeline trust. |
-| `diagnose_width_regression.py` no longer reflects the production (masked) detrend path (WR-03) | Carried forward from `01-REVIEW.md` | ⚠️ Warning — diagnostic tool staleness, not a blocker to the phase goal itself. |
+| WR-01: `diagnose_track10_coverage.py`'s "production" path omits `DETREND_MAX_Y_DEGREE`, reports 10x-worse numbers than real production | ⚠️ Warning | Diagnostic-tooling staleness; does not affect the shipped extraction pipeline. |
+| WR-02: `diagnose_width_regression.py`'s sweep still never applies `DETREND_MAX_Y_DEGREE` | ⚠️ Warning | Same class as WR-01; diagnostic tool drift, not a production defect. |
+| WR-03: `find_track_file` (thermal/height-map read path) has no symlink rejection, unlike every other data-touching path | ⚠️ Warning | Real latent gap, inconsistent with the codebase's own established threat model, but does not currently misfire against the 4-file real dataset. |
+| WR-04: `load_wyko_asc` has no exact-filename guard of its own; silently defaults a missing `pixel_size_mm` header | ⚠️ Warning | Guard exists one layer up in `extract_track_targets`; gap only affects direct-caller diagnostic scripts. |
+| WR-05: `robust_plane_detrend`'s `order`/`max_y_degree` validation runs after the degenerate-data early return | ⚠️ Warning | Production call sites always pass hardcoded, correct values; only affects programmatically-swept `order` values in diagnostics. |
+| WR-06: `bin_profile`'s `np.nanmedian` over all-NaN slices emits an uncontrolled `RuntimeWarning` on every real run | ⚠️ Warning | Cosmetic/log-hygiene issue; behavior is otherwise correctly handled downstream. |
+| IN-01/IN-02 | ℹ️ Info | Unused import; redundant no-op path-resolution call. |
+
+None of these findings block the phase goal as scored above; they are legitimate follow-up items (naturally suited to a Phase 2 planning note or a small standalone cleanup) but do not gate Phase 1 completion.
 
 ## Human Verification Required
 
-### 1. Track 10 coverage collapse — override vs. further diagnosis
+### 1. Width-ordering override vs. further investigation (10-vs-14 FLAG)
 
-**Test:** Review `01-08-ORDERING-OUTCOME.md`'s two escalation options: (a) accept the 10-vs-14 ordering FLAG as a documented, known limitation and proceed to Phase 2 with the caveat recorded, or (b) commission a further diagnosed-defect investigation into why `bead_exclusion_mask` + boundary-clip exclusion discards 66.75% of track 10's columns specifically.
+**Test:** Review `01-SIGNOFF-REQUEST.md`'s "Width-ordering override vs. further investigation" section. Choose exactly one: (a) accept the 10-vs-14 FLAG as a documented, known limitation (track 10's median width, from its now-representative 242/400 valid positions, remains below track 14's) and record the rationale, or (b) commission a new gap-closure plan to investigate the 10-vs-14 relationship further.
 
-**Expected:** A recorded decision (override rationale, or a new gap-closure plan) — per the context provided with this verification task, the user has already indicated they want to pursue (b) rather than accept an override; this should be formalized as a follow-up plan before Phase 1 is marked complete.
+**Expected:** A recorded decision, captured via `/gsd-verify-work` run against this phase (not by editing `01-SIGNOFF-REQUEST.md` directly, per that document's own instructions).
 
-**Why human:** This is an explicit scientific/product judgment call the plan's own HONEST-OUTCOME GUARD defers to a human, not something grep or a test can resolve.
+**Why human:** This is an explicit scientific/product judgment call the phase's own HONEST-OUTCOME GUARD defers to a human. Two independent, pre-registered, outcome-independent diagnostic/fix cycles have already been run against this exact defect class (01-06→01-08, then 01-11); a third automated attempt without new evidence would risk becoming outcome-driven tuning, which the phase has explicitly and repeatedly refused to do.
 
-### 2. Visual sign-off on regenerated QA figures (tracks 8, 14, 21)
+### 2. Visual sign-off on all 12 regenerated QA figures
 
-**Test:** Inspect `processed_data/targets/qa/track_{8,14,21}_{residual_map,overlay,width}.png` at full resolution.
+**Test:** Open each of `processed_data/targets/qa/track_{8,10,14,21}_{residual_map,overlay,width}.png` at full resolution and answer the three per-figure-class questions plus the constants-confirmation question in `01-SIGNOFF-REQUEST.md`.
 
-**Expected:** Residual structure is scientifically acceptable process/substrate variation (not underfit global curvature or bead-absorption artifacts); boundary traces follow the physical bead closely enough to serve as ground truth for these three tracks.
+**Expected:** Residual structure is scientifically acceptable process/substrate variation on all 4 tracks (no coherent track-wide bow, no manufactured edge feature); boundary overlays are continuous and physically plausible with explicit gray-shaded invalid regions, including track 10; crop-edge behavior is physically plausible and track 10's prior terminal V-spike is confirmed gone; the four locked constants are confirmed fixed independently of the ordering outcome.
 
-**Why human:** This verification directly inspected the overlay images and found them plausible (continuous traces, explicit gap shading), but confirming residual-map scientific adequacy and boundary quality at full resolution is a domain judgment beyond what an automated verifier can certify.
-
-### 3. `check_targets.py` coverage-floor policy decision
-
-**Test:** Decide the project's minimum-valid-fraction floor for a track to be considered usable (CR-02's fix suggests 50%, matching the existing informational threshold already printed).
-
-**Expected:** A `MIN_VALID_FRACTION` constant and a hard `require(...)` gate are added, or an explicit documented exception is recorded for any track allowed to fall below it.
-
-**Why human:** Choosing the floor value is a project policy decision, not a mechanically derivable one.
+**Why human:** This verification's own inspection of `track_10_overlay.png`/`track_10_width.png` confirms a real, continuous boundary trace now exists across most of the 20-100mm span (a major, independently-visible improvement over the prior verification's near-total absence of trace) — but the trace is visibly noisier than tracks 8/21, and the width curve trails toward near-zero past x≈70mm. Whether this residual noise level is within acceptable "no sawtooth/high-frequency jitter" bounds is a domain judgment call this verifier cannot certify programmatically; it is exactly the question `01-SIGNOFF-REQUEST.md` was built to route to a human.
 
 ## Gaps Summary
 
-Plans 01-06/01-07/01-08 successfully closed the prior verification's Gap 1 (provenance completeness) in full — `extraction_params()` is now complete (15 keys) and change-sensitive, Amendment A4 is recorded, and the bead-mask fix was applied uniformly via a pre-registered, outcome-independent criterion with no per-track tuning (independently re-confirmed here).
+This re-verification finds that the four gap-closure plans (01-09 through 01-12) genuinely closed the two prior structural BLOCKERs (CR-02: `check_targets.py` no longer silently passes catastrophic coverage loss; CR-03: the publish path is no longer symlink-exploitable) and resolved the underlying defect that made track 10's target artifact structurally unusable (its valid coverage rose from 5.2% to 60.5% via a uniform, pre-registered, outcome-independent fix). All 53 regression tests pass; no debt markers or blocker-severity anti-patterns were found in phase source files; both requirement IDs (TARGET-01, TARGET-02) are accounted for with no orphans; `REQUIREMENTS.md`'s prior false "Complete" marking on TARGET-02 has been correctly walked back.
 
-However, the phase goal remains unmet for two independent reasons, one carried forward and two newly surfaced by this session's code review and independently corroborated during this verification:
-
-1. **The roadmap's required width ordering is still not achieved** (10-vs-14 FLAGs), traced to track 10's bead sitting at the y-strip edge, which collapses its valid coverage to 5.2% and makes its extracted target unusable as ground truth. This is honestly reported, not tuned away — but it is still a phase-goal blocker, and the QA-sanity criterion for track 10 fails as a direct consequence (its overlay shows no visible boundary trace).
-2. **The automated safety net for this phase's "trusted downstream" promise has two independently reproduced, unresolved holes**: `check_targets.py` reports success even when a track is 95% invalid (CR-02), and the artifact-publication path can be tricked by a pre-existing symlink into deleting an arbitrary in-repository directory (CR-03, reproduced live). Both bear directly on whether this phase's output can be trusted as a reproducible, safe foundation for Phase 2.
-
-None of these gaps is assigned to a later phase in the roadmap, and no override has been recorded for the ordering criterion — the human has indicated intent to pursue further diagnosis of track 10 rather than accept an override. Phase 1 should not be marked complete, and Phase 2 should not consume `processed_data/targets/track_10_targets.npz` as-is, until these are resolved.
+What remains is not a code defect but two linked human decisions, both routed through the same artifact (`01-SIGNOFF-REQUEST.md`) and the same action (`/gsd-verify-work` against Phase 1): (1) whether to accept the residual 10-vs-14 width-ordering FLAG as a documented limitation or commission further investigation, and (2) visual sign-off on the 12 regenerated QA figures, most notably track 10's now-present-but-still-somewhat-noisy boundary trace. Per this phase's own design (an explicit HONEST-OUTCOME GUARD that refuses to keep tuning code in response to an outcome it has already investigated twice), status is `human_needed` rather than `gaps_found` — there is no further mechanical gap-closure step available; the phase awaits a human decision, not more code.
 
 ---
 
-_Verified: 2026-07-20T22:10:00Z_
+_Verified: 2026-07-21T18:30:00Z_
 _Verifier: Claude (gsd-verifier)_
