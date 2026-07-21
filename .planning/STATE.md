@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-09-PLAN.md
-last_updated: "2026-07-21T16:24:08.192Z"
+stopped_at: Completed 01-10-PLAN.md
+last_updated: "2026-07-21T16:30:40.475Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-07-21
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [████████░░] 75%
 | Phase 01 P07 | 10 min | 3 tasks | 5 files |
 | Phase 01 P08 | 8min | 2 tasks | 1 files |
 | Phase 01 P09 | 8min | 3 tasks | 3 files |
+| Phase 01 P10 | 12min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Relocated the sweep's evidence CSV to processed_data/diagnostics/ (sibling of targets/), outside the tree publish_staging_dir renames and rmtree's.
 - [Phase ?]: Removed find_track_file's permissive substring fallback entirely; the delimiter-anchored regex is now the sole candidate filter (WR-01).
 - [Phase ?]: Extended the exact-basename fail-fast guard from the height-map loader to the thermal and SEM loaders, including lexical symlink rejection for SEM directories (WR-02).
+- [Phase ?]: [Phase 01-target-extraction-contract]: Closed CR-03 by adding reject_symlink_path() (repo-root-bounded ancestor walk) called first in resolve_output_path, plus is_symlink() re-checks immediately before every rmtree/rename in publish_staging_dir.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Closed CR-02 by promoting check_targets.py's coverage check to require(valid_fraction >= MIN_VALID_FRACTION = 0.5) — a single project-wide floor with no per-track exemption; check_targets.py now intentionally exits non-zero on track 10's 5.2% valid fraction until plan 01-11 resolves it.
 
 ### Pending Todos
 
@@ -122,6 +125,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-21T16:24:08.180Z
-Stopped at: Completed 01-09-PLAN.md
+Last session: 2026-07-21T16:30:40.465Z
+Stopped at: Completed 01-10-PLAN.md
 Resume file: None
