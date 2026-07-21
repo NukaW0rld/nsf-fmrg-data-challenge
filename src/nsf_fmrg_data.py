@@ -125,6 +125,8 @@ def extract_final_thermal_frames(thermal_dir, track_id):
     mat = _loadmat_any(path)
     frames, key = find_thermal_array(mat)
     on_start, on_stop, score, threshold = detect_laser_on_interval(frames)
+    if on_stop is None:
+        raise ValueError(f'No laser-on interval detected for track {track_id} in {path}.')
     stop_idx = int(on_stop)
     start_idx = max(0, stop_idx - EXTRACTED_THERMAL_FRAMES)
     segment = frames[start_idx:stop_idx]
