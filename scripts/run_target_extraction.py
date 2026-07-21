@@ -59,7 +59,22 @@ def resolve_raw_dir(project_root: Path) -> Path:
     return raw_dir
 
 
+def reject_symlink_path(path: Path, project_root: Path) -> None:
+    root = Path(project_root).resolve(strict=True)
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    if candidate.is_symlink():
+        raise ValueError(f"Output path must not be a symlink: {candidate}.")
+    for ancestor in candidate.parents:
+        if ancestor == root or not ancestor.is_relative_to(root):
+            break
+        if ancestor.is_symlink():
+            raise ValueError(f"Output path must not be a symlink: {ancestor}.")
+
+
 def resolve_output_path(path: Path, project_root: Path, raw_dir: Path) -> Path:
+    reject_symlink_path(path, project_root)
     root = Path(project_root).resolve(strict=True)
     protected_raw = Path(raw_dir).resolve(strict=True)
     candidate = Path(path).resolve(strict=False)
@@ -297,11 +312,19 @@ def publish_staging_dir(staging_dir: Path, targets_dir: Path, project_root: Path
         project_root,
         raw_dir,
     )
+    if backup_dir.is_symlink():
+        raise ValueError(f"Refusing to remove a symlinked backup path: {backup_dir}.")
     if backup_dir.exists():
         shutil.rmtree(backup_dir)
     if targets_dir.exists():
+        if targets_dir.is_symlink() or backup_dir.is_symlink():
+            raise ValueError(f"Refusing to rename a symlinked path: {targets_dir} -> {backup_dir}.")
         targets_dir.rename(backup_dir)
+    if targets_dir.is_symlink() or staging_dir.is_symlink():
+        raise ValueError(f"Refusing to rename a symlinked path: {staging_dir} -> {targets_dir}.")
     staging_dir.rename(targets_dir)
+    if backup_dir.is_symlink():
+        raise ValueError(f"Refusing to remove a symlinked backup path: {backup_dir}.")
     if backup_dir.exists():
         shutil.rmtree(backup_dir)
 

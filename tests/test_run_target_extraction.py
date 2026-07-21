@@ -88,12 +88,113 @@ def test_symlink_output_into_raw_is_rejected():
         try:
             runner.run_pipeline(root, track_ids=(8,), track_runner=clean_stub, repository_anchor=root)
         except ValueError as exc:
-            require("raw" in str(exc).lower(), "symlink rejection must identify the protected raw tree")
+            require("symlink" in str(exc).lower(), "symlink rejection must identify the offending symlinked path")
         else:
             raise AssertionError("Expected processed_data symlink traversal into raw to be rejected")
 
         require(before == runner.snapshot_raw(raw_dir), "symlink rejection must leave raw bytes and metadata unchanged")
         require(not (raw_dir / "targets" / "extraction_params.json").exists(), "parameter output must not appear through the symlink")
+
+
+def test_symlink_at_backup_path_is_rejected():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = make_repository(temp_dir)
+        raw_dir = runner.resolve_raw_dir(root.resolve())
+        before = runner.snapshot_raw(raw_dir)
+
+        victim = root / "VICTIM"
+        victim.mkdir()
+        sentinel = victim / "sentinel.txt"
+        sentinel.write_text("do not delete\n", encoding="utf-8")
+
+        (root / "processed_data").mkdir()
+        (root / "processed_data" / "targets.previous").symlink_to(victim, target_is_directory=True)
+
+        try:
+            runner.run_pipeline(root, track_ids=(8,), track_runner=clean_stub, repository_anchor=root)
+        except ValueError as exc:
+            require("symlink" in str(exc).lower(), "backup-path rejection must identify the symlinked path")
+        else:
+            raise AssertionError("Expected a symlinked targets.previous to be rejected")
+
+        require(before == runner.snapshot_raw(raw_dir), "symlink rejection must leave raw bytes and metadata unchanged")
+        require(
+            sentinel.is_file() and sentinel.read_text(encoding="utf-8") == "do not delete\n",
+            "victim directory and sentinel must survive a rejected publish",
+        )
+        require(
+            not (root / "processed_data" / "targets").exists(),
+            "targets must not be published when the backup path is a rejected symlink",
+        )
+
+
+def test_symlink_at_processed_data_is_rejected():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = make_repository(temp_dir)
+        raw_dir = runner.resolve_raw_dir(root.resolve())
+        before = runner.snapshot_raw(raw_dir)
+
+        victim = root / "VICTIM"
+        victim.mkdir()
+        sentinel = victim / "sentinel.txt"
+        sentinel.write_text("do not delete\n", encoding="utf-8")
+
+        (root / "processed_data").symlink_to(victim, target_is_directory=True)
+
+        try:
+            runner.run_pipeline(root, track_ids=(8,), track_runner=clean_stub, repository_anchor=root)
+        except ValueError as exc:
+            require("symlink" in str(exc).lower(), "processed_data rejection must identify the symlinked path")
+        else:
+            raise AssertionError("Expected a symlinked processed_data to be rejected")
+
+        require(before == runner.snapshot_raw(raw_dir), "symlink rejection must leave raw bytes and metadata unchanged")
+        require(
+            sentinel.is_file() and sentinel.read_text(encoding="utf-8") == "do not delete\n",
+            "victim directory and sentinel must survive a rejected publish",
+        )
+        require(
+            not (victim / "targets").exists(),
+            "targets must not be published through a symlinked processed_data path",
+        )
+
+
+def test_publish_refuses_symlinked_backup_immediately_before_rmtree():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = make_repository(temp_dir)
+        raw_dir = runner.resolve_raw_dir(root.resolve())
+        project_root = root.resolve()
+
+        victim = project_root / "VICTIM"
+        victim.mkdir()
+        sentinel = victim / "sentinel.txt"
+        sentinel.write_text("do not delete\n", encoding="utf-8")
+
+        processed_data = project_root / "processed_data"
+        processed_data.mkdir()
+        targets_dir = processed_data / "targets"
+        targets_dir.mkdir()
+        (targets_dir / "existing.txt").write_text("prior generation\n", encoding="utf-8")
+
+        staging_dir = processed_data / ".targets-staging-test"
+        staging_dir.mkdir()
+        (staging_dir / "new.txt").write_text("new generation\n", encoding="utf-8")
+
+        backup_dir = processed_data / "targets.previous"
+        backup_dir.symlink_to(victim, target_is_directory=True)
+
+        try:
+            runner.publish_staging_dir(staging_dir, targets_dir, project_root, raw_dir)
+        except ValueError as exc:
+            require("symlink" in str(exc).lower(), "publish rejection must identify the symlinked backup path")
+        else:
+            raise AssertionError("Expected publish_staging_dir to reject a symlinked backup path")
+
+        require(
+            sentinel.is_file() and sentinel.read_text(encoding="utf-8") == "do not delete\n",
+            "victim directory and sentinel must survive publish rejection",
+        )
+        require((targets_dir / "existing.txt").is_file(), "prior targets generation must remain untouched")
 
 
 def test_snapshot_diff_classifies_add_remove_and_same_size_change():
@@ -255,6 +356,9 @@ if __name__ == "__main__":
     tests = [
         test_repository_root_rejection_is_read_only,
         test_symlink_output_into_raw_is_rejected,
+        test_symlink_at_backup_path_is_rejected,
+        test_symlink_at_processed_data_is_rejected,
+        test_publish_refuses_symlinked_backup_immediately_before_rmtree,
         test_snapshot_diff_classifies_add_remove_and_same_size_change,
         test_success_path_audits_raw_in_finally,
         test_injected_failure_propagates_after_clean_audit,
