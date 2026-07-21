@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import tempfile
 
 import numpy as np
 
@@ -149,6 +150,41 @@ def test_polynomial_basis_sizes_are_stable():
     require(len(coef_order_four) == 15, "order=4 must use a 15-term total-degree basis")
 
 
+def test_find_track_file_rejects_unanchored_substring_match():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / 'Heightmap_210.ASC').write_bytes(b"")
+        result = nsf_fmrg_data.find_track_file(root, 10, ['.asc'])
+        require(
+            result is None,
+            "a bare substring occurrence ('10' inside '210') must not qualify as a match",
+        )
+
+
+def test_find_track_file_still_resolves_real_dataset_names():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for track_id in (8, 10, 14, 21):
+            (root / f'Heightmap_{track_id}.ASC').write_bytes(b"")
+        for track_id in (8, 10, 14, 21):
+            result = nsf_fmrg_data.find_track_file(root, track_id, ['.asc'])
+            require(result is not None, f"track {track_id} must still resolve")
+            require(
+                result.name == f'Heightmap_{track_id}.ASC',
+                f"track {track_id} resolved to {result.name}, expected Heightmap_{track_id}.ASC",
+            )
+
+
+def test_height_map_loader_raises_value_error_when_unresolved():
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            nsf_fmrg_data.load_wyko_asc(tmp, 10)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("load_wyko_asc must raise ValueError when no file resolves")
+
+
 if __name__ == "__main__":
     tests = [
         test_default_order_removes_affine_surface,
@@ -156,6 +192,9 @@ if __name__ == "__main__":
         test_degenerate_fallback_is_preserved_for_all_orders,
         test_polynomial_basis_sizes_are_stable,
         test_robust_plane_detrend_fit_mask_excludes_bead_from_fit,
+        test_find_track_file_rejects_unanchored_substring_match,
+        test_find_track_file_still_resolves_real_dataset_names,
+        test_height_map_loader_raises_value_error_when_unresolved,
     ]
     for test in tests:
         test()

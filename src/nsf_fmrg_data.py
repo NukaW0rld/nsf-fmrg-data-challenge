@@ -25,7 +25,7 @@ def find_track_file(root, track_id, suffixes):
     for p in root.rglob('*'):
         if p.is_file() and p.suffix.lower() in suffixes:
             name = p.name.lower()
-            if re.search(rf'(^|[_\-\s]){track_id}($|[_\-\s\.])', name) or f'{track_id}' in name:
+            if re.search(rf'(^|[_\-\s]){track_id}($|[_\-\s\.])', name):
                 matches.append(p)
     matches = sorted(matches, key=natural_key)
     return matches[0] if matches else None
@@ -159,6 +159,8 @@ def parse_wyko_header(path):
 
 def load_wyko_asc(height_dir, track_id, crop_to_common=True):
     path = find_track_file(height_dir, track_id, ['.asc', '.txt'])
+    if not path:
+        raise ValueError(f'No height-map file found for track {track_id} under {height_dir}.')
     header = parse_wyko_header(path)
     x_size = int(header['x_size'])
     y_size = int(header['y_size'])
