@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-target-extraction-contract
 source: [01-VERIFICATION.md]
 started: 2026-07-20T00:54:17Z
-updated: 2026-07-21T19:30:00Z
+updated: 2026-07-21T20:00:00Z
 ---
 
 ## Current Test
@@ -121,10 +121,15 @@ blocked: 0
   reason: "User reported: the 10-vs-14 inversion is strongly localized, not a uniform gap. Through 20-70mm tracks 10 and 14 are tied on common valid positions (0.4493 vs 0.4495mm); from 70-100mm track 10 collapses to 0.0213mm vs track 14's 0.4843mm, and track 10 exceeds track 14 at only 8.3% of common positions in that region. track_10_overlay.png shows boundaries becoming narrow and fragmented past ~70mm while visible track structure appears to continue. User authorized exactly one further bounded, diagnosis-only investigation: compare raw cross-sections, candidate half-max runs, rejection reasons, and boundary reacquisition before/after 70mm on track 10; pre-register assessment criteria and prohibit choosing constants based on whether 10 > 14. If raw-data evidence confirms genuine physical narrowing or inadequate observability, accept option (a) (documented known limitation) immediately — no further open-ended tuning cycle is authorized."
   severity: major
   test: 5
-  root_cause: ""     # Filled by diagnosis
-  artifacts: []      # Filled by diagnosis
-  missing: []        # Filled by diagnosis
-  debug_session: ""  # Filled by diagnosis
+  root_cause: "EXTRACTION ARTIFACT, not genuine physical narrowing. Track 10's raw (pre-detrend) within-column bead contrast stays flat (~0.035-0.05mm) across the entire 20-100mm scan -- it does not decay toward the noise floor past x=70mm, ruling out physical narrowing. Instead, track 10's raw data carries an enormous (~1.7mm, ~40-85x larger than tracks 8/14/21) along-track baseline drift that the shared DETREND_POLY_ORDER=4/DETREND_MAX_Y_DEGREE=2 surface fit must almost entirely reproduce (corroborates 01-11-DIAGNOSIS's fitted_span/raw_span~1.01 finding). The fitted plane's own y-shape prediction error (isolated directly, not just residual noise) grows systematically and monotonically as x approaches the domain's far edge (x=100mm) -- a Runge-type polynomial edge-of-domain effect along x, uncapped even though max_y_degree caps the analogous y-direction risk. Because track 10's dynamic range is so much larger than the other tracks', this small-but-growing fitting error (reaching ~0.01-0.04mm by x=90-99mm) rivals and then exceeds track 10's true bead contrast specifically in the tail, manufacturing an apparent low-y feature while eroding/over-subtracting the true bead's residual, which raises the per-column relative half-max threshold until the true bead's above-threshold run shrinks to a few points or vanishes from the candidate set entirely. Full sequential reproduction of halfmax_edges/continuity-tracking confirms it behaves exactly as designed on this corrupted per-column input -- no case was found where a valid non-edge candidate existed but lost a tracking tie-break. Track 14 (control) shows no comparable tail-localized effect. 01-11-CRITERION's fix-validation test is track-wide/all-x-aggregated and cannot detect an artifact concentrated in only the last ~30mm of the scan."
+  artifacts:
+    - path: "src/nsf_fmrg_data.py:224-274"
+      issue: "robust_plane_detrend's shared polynomial surface has no cap on x-direction fitting error growth toward the domain edge (x=100mm), even though max_y_degree caps the analogous y-direction Runge-type risk; track 10's exceptionally large raw dynamic range (~40-85x the other tracks) makes this small absolute fitting error large enough to rival its true bead signal in the x=70-100mm tail"
+    - path: "src/targets.py:137-193"
+      issue: "halfmax_edges correctly executes its documented contract on the corrupted per-column input -- confirmed NOT the defect; included for completeness since it is where the symptom (vanishing bead candidate) manifests"
+  missing:
+    - "A future fix-selection cycle (separately scoped, with its own pre-registered outcome-independent criterion per the 01-11-CRITERION precedent) targeting the x-direction detrend fit-accuracy mechanism -- e.g. capping/regularizing the x-direction polynomial degree or fit-error growth near domain edges, analogous to the existing max_y_degree cap"
+  debug_session: ".planning/debug/track10-14-ordering-tail-collapse.md"
 
 - gap_id: G-01-5
   truth: "Boundary overlays are continuous and physically plausible (no unacceptable fragmentation or abrupt excursions), confirmed on the regenerated QA figures under the Amendment A5 contract."
@@ -132,7 +137,14 @@ blocked: 0
   reason: "User reported (visual sign-off, Test 6): gap handling passes (grey shading, NaN-broken traces, no interpolation), but boundaries remain fragmented and physically implausible even after the continuity-tracking fix (01-05/G-01-2). Track 10 has 65 separate valid runs and collapses toward near-zero width after ~70mm; tracks 8, 14, and 21 also retain abrupt excursions; maximum adjacent boundary jumps are ~0.62-0.88mm across the four tracks. This is a regression/still-open finding against G-01-2's truth after its fix — recorded as a new gap per verify-work's reconciliation rule rather than reopening the resolved gap."
   severity: major
   test: 6
-  root_cause: ""     # Filled by diagnosis
-  artifacts: []      # Filled by diagnosis
-  missing: []        # Filled by diagnosis
-  debug_session: ""  # Filled by diagnosis
+  root_cause: "01-05-PLAN.md's continuity-tracking fix for G-01-2 replaced halfmax_edges' original 'always pick the single largest above-half-max run, independently per column' rule with 'pick whichever non-clipped candidate run's midpoint is numerically nearest to previous_center, when tracking history exists' (src/targets.py:161-171). This has two structural gaps: (1) no maximum-distance gate -- it always returns some candidate however far from previous_center, with length only consulted as an exact-float-tie tiebreak that in practice never fires, so a 1-native-pixel noise spike and a 300-pixel true bead run are treated as equally legitimate candidates (measured: Track 8 5.7%, Track 10 7.1%, Track 14 34.3%, Track 21 43.1% of tracked selections choose a candidate under 40% of an available same-column bead-plausible alternative's length); (2) extract_targets_from_arrays (src/targets.py:277-283) unconditionally overwrites previous_center with whatever run was just selected, correct or wrong, with no plausibility check -- so one spurious column (true bead run fragmenting under a local noise dip) permanently corrupts the anchor and produces a MULTI-COLUMN self-reinforcing wrong lock, a new failure mode the pre-fix independent-per-column algorithm did not have. Directly traced on Track 8 (x=24.9-26.5mm, an 8-column/1.4mm wrong-lock episode with the true bead candidate present but rejected in most of the same columns) and Track 10 (near-continuous narrow lock from x~68mm through beyond x~82mm). MAX_TRACKING_GAP_COLUMNS=10 resets were measured directly and are rare (0-1 per track) -- tested and eliminated as the dominant mechanism. Reproduced the reviewer's exact numbers from the real artifacts: finalized valid-run counts 22/65/63/34 for tracks 8/10/14/21 (Track 10's 65 is an exact match) and max adjacent-column jumps of 0.32-0.88mm (matching the reported ~0.62-0.88mm)."
+  artifacts:
+    - path: "src/targets.py:161-171"
+      issue: "halfmax_edges' tracked-candidate selection is a pure nearest-midpoint rule with no maximum-distance gate and no effective size/plausibility weighting (length is only an unreachable exact-tie tiebreak)"
+    - path: "src/targets.py:277-283"
+      issue: "extract_targets_from_arrays unconditionally overwrites previous_center with the just-selected run's midpoint on every successful column, with no plausibility check, letting one spurious column corrupt the anchor and propagate a wrong lock across many subsequent columns"
+  missing:
+    - "Add a gating/plausibility criterion to the tracked-selection rule: reject a nearest candidate whose distance from previous_center exceeds a bounded threshold (falling back to invalid rather than accepting an implausibly-distant nearest pick), and/or weight selection by candidate length relative to recent tracked width, not just midpoint distance"
+    - "Merge adjacent above-threshold sub-runs separated by only a few below-threshold samples before candidate enumeration, so a noise-fragmented true bead is not split into competing tiny candidates"
+    - "Consider a DP/Viterbi-style boundary tracker optimizing the whole column sequence jointly (as originally suggested for G-01-2), which would address the self-reinforcing-lock problem more fundamentally than a per-column greedy gate"
+  debug_session: ".planning/debug/boundary-fragmentation-post-continuity-fix.md"
