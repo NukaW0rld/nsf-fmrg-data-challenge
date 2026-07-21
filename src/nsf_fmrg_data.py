@@ -175,6 +175,8 @@ def load_wyko_asc(height_dir, track_id, crop_to_common=True):
     if not path:
         raise ValueError(f'No height-map file found for track {track_id} under {height_dir}.')
     header = parse_wyko_header(path)
+    if 'x_size' not in header or 'y_size' not in header:
+        raise ValueError(f'{path} header is missing X Size/Y Size fields.')
     x_size = int(header['x_size'])
     y_size = int(header['y_size'])
     pixel = float(header.get('pixel_size_mm', 0.003982))
