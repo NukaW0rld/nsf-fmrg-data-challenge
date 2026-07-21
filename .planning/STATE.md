@@ -2,19 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Completed 01-08-PLAN.md
-last_updated: "2026-07-21T04:24:09.015Z"
-last_activity: 2026-07-20
-last_activity_desc: Phase 01 planning complete
+stopped_at: Completed 01-09-PLAN.md
+last_updated: "2026-07-21T16:24:08.192Z"
+last_activity: 2026-07-21
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  completed_phases: 0
+  total_plans: 12
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -29,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 4 of 8
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-07-20 — Phase 01 planning complete
+Last activity: 2026-07-21
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -67,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 01 P06 | 7 min | 2 tasks | 2 files |
 | Phase 01 P07 | 10 min | 3 tasks | 5 files |
 | Phase 01 P08 | 8min | 2 tasks | 1 files |
+| Phase 01 P09 | 8min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +95,10 @@ Recent decisions affecting current work:
 - [Phase 01-target-extraction-contract]: Implemented the plan-06 endorsed bead-region masking of the detrend surface fit (BEAD_MASK_HEIGHT_FRACTION fixed at the already-locked HALF_MAX_FRACTION), completed extraction_params() provenance (MAX_TRACKING_GAP_COLUMNS, BEAD_MASK_HEIGHT_FRACTION, 15 keys), and canonicalized both as Amendment A4.
 - [Phase ?]: The 8>10>14>21 width ordering is NOT restored under Amendment A4's corrected extraction (10-vs-14 FLAGs); no extraction parameter was changed, and the outcome is escalated for a separate human-override decision rather than tuned.
 - [Phase ?]: Track 10's valid-bin fraction collapsed to 5.2% (21/400) under the bead-mask fix, down from ~43.8% previously — reported as material context for the human decision, not diagnosed/fixed in this plan.
+- [Phase ?]: Restructured the width-regression sweep's detrend cache to iterate (order, bead_mask) so it exercises the production bead-masked fit_mask path, not just the historical unmasked baseline.
+- [Phase ?]: Relocated the sweep's evidence CSV to processed_data/diagnostics/ (sibling of targets/), outside the tree publish_staging_dir renames and rmtree's.
+- [Phase ?]: Removed find_track_file's permissive substring fallback entirely; the delimiter-anchored regex is now the sole candidate filter (WR-01).
+- [Phase ?]: Extended the exact-basename fail-fast guard from the height-map loader to the thermal and SEM loaders, including lexical symlink rejection for SEM directories (WR-02).
 
 ### Pending Todos
 
@@ -120,6 +122,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-20T21:38:35.578Z
-Stopped at: Completed 01-08-PLAN.md
+Last session: 2026-07-21T16:24:08.180Z
+Stopped at: Completed 01-09-PLAN.md
 Resume file: None

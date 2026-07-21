@@ -79,7 +79,7 @@ Plans:
 
 **Wave 9** *(gap closure, blocked on Wave 8 completion)*
 
-- [ ] 01-09-PLAN.md — WR-03/WR-01/WR-02: give the width-regression sweep a bead-mask axis so it matches production, make `find_track_file`'s anchored regex load-bearing, and add exact-resolution guards to the thermal and SEM loaders
+- [x] 01-09-PLAN.md — WR-03/WR-01/WR-02: give the width-regression sweep a bead-mask axis so it matches production, make `find_track_file`'s anchored regex load-bearing, and add exact-resolution guards to the thermal and SEM loaders
 - [ ] 01-10-PLAN.md — CR-03/CR-02: reject symlinks at every publish path (rmtree/rename) with victim-survival regressions, and promote the coverage check to a hard `MIN_VALID_FRACTION = 0.5` gate that fails closed
 
 **Wave 10** *(gap closure, blocked on Wave 9 completion)*
