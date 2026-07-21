@@ -227,13 +227,13 @@ def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit
     if fit_mask is not None:
         fit_mask_strided = np.asarray(fit_mask, dtype=bool)[::stride_y, ::stride_x]
         valid = valid & fit_mask_strided.ravel()
-    if valid.sum() < 100:
-        return Z_mm.copy(), None
-
     if not isinstance(order, (int, np.integer)) or order < 0:
         raise ValueError('order must be a non-negative integer.')
     if max_y_degree is not None and (not isinstance(max_y_degree, (int, np.integer)) or max_y_degree < 0):
         raise ValueError('max_y_degree must be a non-negative integer or None.')
+    if valid.sum() < 100:
+        return Z_mm.copy(), None
+
     exponents = [
         (i, degree - i)
         for degree in range(order + 1)
