@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 7/8 plans executed
+**Plans:** 12 plans (8 executed, 4 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -76,6 +76,19 @@ Plans:
 **Wave 8** *(gap closure, blocked on Wave 7 completion)*
 
 - [x] 01-08-PLAN.md — Gap 2 outcome: atomically regenerate 4 NPZs + 12 QA PNGs + params/manifest, re-run `check_targets.py`, and report the 8>10>14>21 ordering honestly (escalate, never tune, if not restored)
+
+**Wave 9** *(gap closure, blocked on Wave 8 completion)*
+
+- [ ] 01-09-PLAN.md — WR-03/WR-01/WR-02: give the width-regression sweep a bead-mask axis so it matches production, make `find_track_file`'s anchored regex load-bearing, and add exact-resolution guards to the thermal and SEM loaders
+- [ ] 01-10-PLAN.md — CR-03/CR-02: reject symlinks at every publish path (rmtree/rename) with victim-survival regressions, and promote the coverage check to a hard `MIN_VALID_FRACTION = 0.5` gate that fails closed
+
+**Wave 10** *(gap closure, blocked on Wave 9 completion)*
+
+- [ ] 01-11-PLAN.md — Track 10's coverage collapse, end to end in one plan: committed diagnostic, git-committed outcome-independent fix criterion, ONE uniform track-independent fix + Amendment A5, atomic 4-track regeneration, honest ordering report
+
+**Wave 11** *(gap closure, blocked on Wave 10 completion)*
+
+- [ ] 01-12-PLAN.md — Correct the `REQUIREMENTS.md` TARGET-02 record and produce the human visual sign-off handoff for all 12 regenerated QA figures
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
@@ -156,7 +169,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 7/8 | In Progress|  |
+| 1. Target Extraction & Contract | 8/12 | In Progress|  |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
