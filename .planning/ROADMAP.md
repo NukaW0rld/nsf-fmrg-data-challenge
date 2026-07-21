@@ -84,7 +84,7 @@ Plans:
 
 **Wave 10** *(gap closure, blocked on Wave 9 completion)*
 
-- [ ] 01-11-PLAN.md — Track 10's coverage collapse, end to end in one plan: committed diagnostic, git-committed outcome-independent fix criterion, ONE uniform track-independent fix + Amendment A5, atomic 4-track regeneration, honest ordering report
+- [x] 01-11-PLAN.md — Track 10's coverage collapse, end to end in one plan: committed diagnostic, git-committed outcome-independent fix criterion, ONE uniform track-independent fix + Amendment A5, atomic 4-track regeneration, honest ordering report
 
 **Wave 11** *(gap closure, blocked on Wave 10 completion)*
 
