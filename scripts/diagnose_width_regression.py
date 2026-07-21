@@ -18,6 +18,7 @@ from targets import (
     MAX_TRACKING_GAP_COLUMNS,
     TRACK_IDS,
     TRACK_POWER_W,
+    bead_exclusion_mask,
     bin_profile,
     fill_small_gaps,
     finalize_smoothed_boundaries,
@@ -35,6 +36,11 @@ from run_target_extraction import (
 
 DETREND_ORDERS = (1, 2, 4)
 CONTINUITY_OPTIONS = (True, False)
+# True rows exercise the production detrend path (Amendment A4: the shared
+# BEAD_MASK_HEIGHT_FRACTION fit_mask via bead_exclusion_mask). False rows are
+# retained only as the historical pre-Amendment-A4 unmasked baseline and must
+# never be mistaken for what src/targets.py actually ships.
+BEAD_MASK_OPTIONS = (True, False)
 
 
 def extract_swept(Zd, x_actual_mm, y_mm, continuity):
@@ -90,8 +96,8 @@ def ordering_verdict(medians):
     return 'PASS' if all(a > b for a, b in zip(values, values[1:])) else 'FLAG'
 
 
-def build_row(order, continuity, medians):
-    row = {'detrend_order': order, 'continuity': continuity}
+def build_row(order, continuity, bead_mask, medians):
+    row = {'detrend_order': order, 'continuity': continuity, 'bead_mask': bead_mask}
     for track_id in TRACK_IDS:
         row[f'median_width_{track_id}'] = medians[track_id]
     row['ordering_verdict'] = ordering_verdict(medians)
@@ -102,28 +108,31 @@ def run_sweep(raw_dir):
     height_dir = raw_dir / "height_maps"
     rows = []
     for order in DETREND_ORDERS:
-        detrended = {}
-        for track_id in TRACK_IDS:
-            data = load_wyko_asc(height_dir, track_id)
-            Zd, coef = robust_plane_detrend(
-                data['Z_mm'], data['x_actual_mm'], data['y_mm'], order=order,
-            )
-            detrended[track_id] = (Zd, data['x_actual_mm'], data['y_mm'], coef)
-
-        for continuity in CONTINUITY_OPTIONS:
-            medians = {}
+        for bead_mask in BEAD_MASK_OPTIONS:
+            detrended = {}
             for track_id in TRACK_IDS:
-                Zd, x_actual_mm, y_mm, coef = detrended[track_id]
-                if coef is None:
-                    medians[track_id] = None
-                    continue
-                medians[track_id] = track_median_width_mm(Zd, x_actual_mm, y_mm, continuity)
-            rows.append(build_row(order, continuity, medians))
+                data = load_wyko_asc(height_dir, track_id)
+                fit_mask = bead_exclusion_mask(data['Z_mm']) if bead_mask else None
+                Zd, coef = robust_plane_detrend(
+                    data['Z_mm'], data['x_actual_mm'], data['y_mm'],
+                    order=order, fit_mask=fit_mask,
+                )
+                detrended[track_id] = (Zd, data['x_actual_mm'], data['y_mm'], coef)
+
+            for continuity in CONTINUITY_OPTIONS:
+                medians = {}
+                for track_id in TRACK_IDS:
+                    Zd, x_actual_mm, y_mm, coef = detrended[track_id]
+                    if coef is None:
+                        medians[track_id] = None
+                        continue
+                    medians[track_id] = track_median_width_mm(Zd, x_actual_mm, y_mm, continuity)
+                rows.append(build_row(order, continuity, bead_mask, medians))
     return rows
 
 
 def print_sweep_table(rows):
-    header = "order  continuity  " + "  ".join(
+    header = "order  continuity  bead_mask  " + "  ".join(
         f"track_{tid}(w={TRACK_POWER_W[tid]}W)" for tid in TRACK_IDS
     ) + "  verdict"
     print(f"\n{header}")
@@ -132,11 +141,14 @@ def print_sweep_table(rows):
             "None" if row[f'median_width_{tid}'] is None else f"{row[f'median_width_{tid}']:.4f}"
             for tid in TRACK_IDS
         )
-        print(f"{row['detrend_order']:>5}  {str(row['continuity']):>10}  {values}  {row['ordering_verdict']}")
+        print(
+            f"{row['detrend_order']:>5}  {str(row['continuity']):>10}  "
+            f"{str(row['bead_mask']):>9}  {values}  {row['ordering_verdict']}"
+        )
 
 
 def write_sweep_csv(csv_path, rows):
-    fieldnames = ['detrend_order', 'continuity'] + [f'median_width_{tid}' for tid in TRACK_IDS] + ['ordering_verdict']
+    fieldnames = ['detrend_order', 'continuity', 'bead_mask'] + [f'median_width_{tid}' for tid in TRACK_IDS] + ['ordering_verdict']
     with csv_path.open('w', newline='', encoding='utf-8') as stream:
         writer = csv.DictWriter(stream, fieldnames=fieldnames)
         writer.writeheader()
@@ -158,12 +170,11 @@ def run_diagnostic(project_dir: Path) -> Path:
     print_sweep_table(rows)
 
     diagnostics_dir = resolve_output_path(
-        project_root / "processed_data" / "targets" / "diagnostics",
+        project_root / "processed_data" / "diagnostics",
         project_root,
         raw_dir,
     )
     diagnostics_dir.mkdir(parents=True, exist_ok=True)
-    diagnostics_dir = resolve_output_path(diagnostics_dir, project_root, raw_dir)
 
     csv_path = resolve_output_path(
         diagnostics_dir / "width_regression_sweep.csv",
