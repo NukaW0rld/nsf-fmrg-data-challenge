@@ -16,6 +16,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from targets import (
     BASELINE_PCT,
+    DETREND_MAX_Y_DEGREE,
     DETREND_POLY_ORDER,
     HALF_MAX_FRACTION,
     MAX_TRACKING_GAP_COLUMNS,
@@ -60,7 +61,9 @@ def raw_row_median_profile(Z_mm):
 def production_residual_profile(Z_mm, x_actual_mm, y_mm):
     fit_mask = bead_exclusion_mask(Z_mm)
     Zd, coef = robust_plane_detrend(
-        Z_mm, x_actual_mm, y_mm, order=DETREND_POLY_ORDER, fit_mask=fit_mask,
+        Z_mm, x_actual_mm, y_mm,
+        order=DETREND_POLY_ORDER, fit_mask=fit_mask,
+        max_y_degree=DETREND_MAX_Y_DEGREE,
     )
     profile = np.nanmedian(Zd, axis=1)
     n = len(profile)
