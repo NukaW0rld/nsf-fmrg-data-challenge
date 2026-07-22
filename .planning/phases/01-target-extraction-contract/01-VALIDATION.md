@@ -7,7 +7,7 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-07-19
-updated: 2026-07-21
+updated: 2026-07-22
 ---
 
 # Phase 1 — Validation Strategy
@@ -22,8 +22,8 @@ updated: 2026-07-21
 |----------|-------|
 | **Framework** | plain-Python assertion scripts (planner decision: REQUIREMENTS.md scopes out a test-suite framework; RESEARCH §Validation Architecture specifies runnable assertion scripts; avoids installing any package outside the audited requirements.txt. `tests/test_targets.py`, `tests/test_nsf_fmrg_data.py`, and `tests/test_run_target_extraction.py` use `test_*` functions + bare asserts, pytest-compatible if ever needed) |
 | **Config file** | none — Wave 0 creates `.venv` from requirements.txt only |
-| **Quick run command** | `.venv/bin/python tests/test_targets.py` (27 checks), `.venv/bin/python tests/test_nsf_fmrg_data.py` (12 checks), and `.venv/bin/python tests/test_run_target_extraction.py` (14 checks) — 53 total, all green as of 2026-07-21 |
-| **Optimization-safe command** | `.venv/bin/python -O` variant of all three suites above — asserted to stay green with Python's `-O` flag since plan 01-03 added optimization-safe contract checks; extended coverage through plan 01-11 |
+| **Quick run command** | `.venv/bin/python tests/test_targets.py` (34 checks), `.venv/bin/python tests/test_nsf_fmrg_data.py` (13 checks), and `.venv/bin/python tests/test_run_target_extraction.py` (10 checks) — 57 total, all green as of 2026-07-22 |
+| **Optimization-safe command** | `.venv/bin/python -O` variant of all three suites above — asserted to stay green with Python's `-O` flag since plan 01-03 added optimization-safe contract checks; extended coverage through plan 01-14 |
 | **Full suite command** | `.venv/bin/python scripts/run_target_extraction.py --project_dir .` then `.venv/bin/python scripts/check_targets.py --project_dir .` |
 | **Diagnostic tooling (non-gating)** | `scripts/diagnose_width_regression.py --project_dir .` (detrend-order × continuity × bead-mask sweep, plans 01-06/01-09) and `scripts/diagnose_track10_coverage.py` (per-bin rejection histogram, plan 01-11) — read-only against `data/raw/`, used for evidence gathering, not part of the pass/fail gate |
 | **Estimated runtime** | quick: <10s · full pipeline: ~5–10 min (pure-Python ASC loader) |
@@ -33,8 +33,8 @@ updated: 2026-07-21
 ## Sampling Rate
 
 - **After every task commit:** Run `.venv/bin/python tests/test_targets.py` (once it exists; plan 01 task 1 uses the venv import smoke check)
-- **After every plan wave:** Wave 1: `tests/test_targets.py` green · Wave 2: full pipeline + `check_targets.py` green · Wave 3 (plan 01-03): `tests/test_targets.py` + `tests/test_run_target_extraction.py` green under normal and `-O` Python · Waves 4-11 (plans 01-04 through 01-12): each wave's touched suite(s) plus `check_targets.py` green under normal and `-O` Python; `tests/test_nsf_fmrg_data.py` added at wave 4 and grown through wave 9
-- **Before `/gsd-verify-work`:** invariant tests + loader tests + runner-safety tests + `check_targets.py` green, plus human visual sign-off of the 12 QA figures and the 10-vs-14 width-ordering override decision (tracked as Tests 1-6 in `01-UAT.md`)
+- **After every plan wave:** Wave 1: `tests/test_targets.py` green · Wave 2: full pipeline + `check_targets.py` green · Wave 3 (plan 01-03): `tests/test_targets.py` + `tests/test_run_target_extraction.py` green under normal and `-O` Python · Waves 4-14 (plans 01-04 through 01-15): each wave's touched suite(s) plus `check_targets.py` green under normal and `-O` Python; `tests/test_nsf_fmrg_data.py` added at wave 4 and grown through wave 12
+- **Before `/gsd-verify-work`:** invariant tests + loader tests + runner-safety tests + `check_targets.py` green, plus human visual sign-off of the 12 QA figures and the 10-vs-14 width-ordering override decision (tracked as Tests 1-8 in `01-UAT.md`)
 - **Max feedback latency:** 60 seconds (invariant tests <10s; loader tests <10s; runner-safety tests <10s; artifact checks <10s; only the one-time full extraction run and the non-gating diagnostic sweeps exceed this)
 
 ---
@@ -81,6 +81,14 @@ updated: 2026-07-21
 | 01-11-D4 | 11 | 10 | TARGET-02 | — | all 4 tracks regenerated; track 10 clears 50% floor (242/400, 60.5%); ordering reported honestly | integration + manual_procedural | `scripts/check_targets.py --project_dir .` + `01-11-ORDERING-OUTCOME.md` | ✅ | see Manual-Only |
 | 01-12-D1 | 12 | 11 | TARGET-02 | T-01-30 | `REQUIREMENTS.md` TARGET-02 row corrected from false `Complete` to honest awaiting-sign-off | other | grep against `.planning/REQUIREMENTS.md` | ✅ | ✅ green |
 | 01-12-D2 | 12 | 11 | TARGET-02 | — | `01-SIGNOFF-REQUEST.md` handoff produced naming all 12 figures, 0 pre-ticked checkboxes | manual_procedural | grep counts + doc review | ✅ | see Manual-Only |
+| 01-13-D1 | 13 | 12 | TARGET-01 | — | `DETREND_MAX_XY_DEGREE` (Amendment A6) caps cross/interaction terms only, default `None` leaves every other caller bit-for-bit unchanged, selected via a criterion pre-registered before any src change | unit | `.venv/bin/python tests/test_nsf_fmrg_data.py` and `.venv/bin/python tests/test_targets.py` | ✅ | ✅ green |
+| 01-13-D2 | 13 | 12 | TARGET-02 | — | all 4 tracks regenerated atomically under Amendment A6; provenance intact (17 keys), `MIN_VALID_FRACTION` floor cleared by all tracks | integration | `.venv/bin/python scripts/run_target_extraction.py --project_dir .` + `scripts/check_targets.py --project_dir .` | ✅ | ✅ green |
+| 01-13-D3 | 13 | 12 | TARGET-02 | — | 10-vs-14 width-ordering FLAG persists (and widened) under Amendment A6; honestly reported, no constant tuned to the outcome | manual_procedural | `01-13-ORDERING-OUTCOME.md` | ✅ | see Manual-Only |
+| 01-14-D1 | 14 | 13 | TARGET-01 | — | `merge_adjacent_runs` + plausibility-gated `halfmax_edges`/`extract_targets_from_arrays` close the diagnosed noise-fragmentation and wrong-lock-propagation mechanisms; D-01/D-03 and 01-05's tie-break behavior preserved, no per-track branch | unit | `.venv/bin/python tests/test_targets.py` | ✅ | ✅ green |
+| 01-14-D2 | 14 | 13 | TARGET-02 | — | all 4 tracks regenerated atomically under Amendment A7; fragmentation/jump-statistic before/after comparison reported honestly as MIXED, not uniform improvement | integration + manual_procedural | `scripts/check_targets.py --project_dir .` + `01-14-ORDERING-OUTCOME.md` | ✅ | see Manual-Only |
+| 01-15-T1 | 15 | 14 | TARGET-02 | — | `01-SIGNOFF-REQUEST.md` "Current state" re-derived live from a fresh `check_targets.py` run + `manifest.json` read (Amendment-A7 numbers, no transcription from planning text) | other | live command re-run + grep for expected literals / absence of stale A5-era literals | ✅ | ✅ green |
+| 01-15-T2 | 15 | 14 | TARGET-02 | — | "Contract in effect" table expanded to 7 rows (A6/A7 constants); each of 5 decision checkboxes names which open `01-VERIFICATION.md` item it closes, all left unticked | other | grep counts (`[x]` = 0, checkbox count = 5, figure-path count = 12) | ✅ | ✅ green |
+| 01-15-T3 | 15 | 14 | TARGET-02 | T-01-30 | `REQUIREMENTS.md` TARGET-02 checkbox flipped `[x]`→`[ ]` to agree with its own traceability row; TARGET-01 left untouched | other | grep against `.planning/REQUIREMENTS.md` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -97,7 +105,7 @@ updated: 2026-07-21
 
 ## Manual-Only Verifications
 
-`01-UAT.md` has grown from 4 to 6 tests since the prior audit. Tests 1-3 originally reported `issue` (gaps G-01-1/G-01-2/G-01-3); each has since had a root-cause fix land in a dedicated plan (residual bow → Amendment A3 quartic detrend, plan 01-04; boundary sawtooth → continuity tracking + degenerate-window smoothing, plan 01-05; track 10 crop-edge V-spike and coverage collapse → bead-mask fix + Amendment A5, plans 01-07/01-11) and been re-verified live in `01-VERIFICATION.md`. Test 4 passed. Tests 5 and 6 are the two items still open and are exactly the two `human_verification` entries in `01-VERIFICATION.md`:
+`01-UAT.md` has grown from 6 to 8 tests since the prior audit. Tests 1-3 originally reported `issue` (gaps G-01-1/G-01-2/G-01-3); each has since had a root-cause fix land in a dedicated plan (residual bow → Amendment A3 quartic detrend, plan 01-04; boundary sawtooth → continuity tracking + degenerate-window smoothing, plan 01-05; track 10 crop-edge V-spike and coverage collapse → bead-mask fix + Amendment A5, plans 01-07/01-11) and been re-verified live in `01-VERIFICATION.md`. Test 4 passed. Tests 5 and 6 were answered (option b, and `issue` respectively) against pre-Amendment-A6/A7 generations that have since been superseded by plans 01-13/01-14; per `01-UAT.md`, their answers do not carry forward automatically and have been re-asked as Tests 7 and 8 against the current Amendment-A7 generation. Tests 7 and 8 are the two items still open and are exactly the two `human_verification` entries in `01-VERIFICATION.md` (`status: human_needed`):
 
 | Behavior | Requirement | Why Manual | Test Instructions | Current Status |
 |----------|-------------|------------|-------------------|-----------------|
@@ -105,8 +113,10 @@ updated: 2026-07-21
 | Boundary overlay sanity and explicit gaps | TARGET-02 | Numeric mask/order checks cannot decide whether sharp excursions are physically real or extraction artifacts | `01-UAT.md` Test 2 — `processed_data/targets/qa/track_{id}_overlay.png` | resolved: continuity tracking + smoothing fix (plan 01-05), re-verified |
 | Crop-edge smoothing plausibility | TARGET-02 | Synthetic quadratic exactness (proven by test) does not establish real-curve scientific plausibility | `01-UAT.md` Test 3 — `processed_data/targets/qa/track_{id}_width.png` | resolved: track 10 V-spike confirmed gone (plans 01-07/01-11), re-verified |
 | A1/A2 re-affirmation and no-tuning intent | TARGET-01 | Git chronology proves commit order, not the user's actual scientific ratification/intent | `01-UAT.md` Test 4 | passed |
-| Width-ordering override vs. further investigation (10-vs-14 FLAG) | TARGET-02 | Explicit scientific/product judgment call; two independent, pre-registered, outcome-independent fix cycles (01-06→08, then 01-11) already ran against this defect class — the phase's HONEST-OUTCOME GUARD declines further automated tuning | `01-UAT.md` Test 5 / `01-SIGNOFF-REQUEST.md` — accept as documented limitation (option a) or commission further investigation (option b) | **pending** — decide via `/gsd-verify-work 1` |
-| Visual sign-off on 12 regenerated QA figures | TARGET-02 | Whether track 10's now-present but visibly noisier boundary trace is within acceptable sawtooth/jitter bounds is a domain judgment, not a mechanical check | `01-UAT.md` Test 6 / `01-SIGNOFF-REQUEST.md` — open all 12 `processed_data/targets/qa/*.png` and answer the 4 questions | **pending** — decide via `/gsd-verify-work 1` |
+| Width-ordering override vs. further investigation (10-vs-14 FLAG, pre-A6 generation) | TARGET-02 | Explicit scientific/product judgment call; two independent, pre-registered, outcome-independent fix cycles (01-06→08, then 01-11) already ran against this defect class | `01-UAT.md` Test 5 | superseded: answer (option b) given against a since-superseded generation; re-asked as Test 7 against Amendment A7 |
+| Visual sign-off on 12 regenerated QA figures (pre-A7 generation) | TARGET-02 | Whether track 10's boundary trace is within acceptable sawtooth/jitter bounds is a domain judgment, not a mechanical check | `01-UAT.md` Test 6 | superseded: answer (`issue`) given against the pre-A7 generation; re-asked as Test 8 against Amendment A7 |
+| Decide the 10-vs-14 width-ordering FLAG (re-ask against Amendment A7) | TARGET-02 | Explicit scientific/product judgment call; two further independent, pre-registered, outcome-independent fix cycles (01-13, then 01-14) ran against this defect class since Test 5 — the phase's HONEST-OUTCOME GUARD declines further automated tuning without a new independently-diagnosed root cause | `01-UAT.md` Test 7 / `01-SIGNOFF-REQUEST.md` — accept as documented limitation (option a, recommended by both `01-13-ORDERING-OUTCOME.md` and `01-14-ORDERING-OUTCOME.md`) or commission further investigation (option b) | **pending** — decide via `/gsd-verify-work 1` |
+| Visual sign-off on 12 regenerated QA figures (re-ask against Amendment A7) | TARGET-02 | Whether the MIXED fragmentation outcome and razor-thin 50.50% track-10 coverage margin are within acceptable bounds is a domain judgment, not a mechanical check | `01-UAT.md` Test 8 / `01-SIGNOFF-REQUEST.md` — open all 12 `processed_data/targets/qa/*.png` (run_id `99a4e8472f0a4164938363af0725f31b`) and answer the 4 questions | **pending** — decide via `/gsd-verify-work 1` |
 
 ---
 
@@ -119,7 +129,7 @@ updated: 2026-07-21
 - [x] Feedback latency < 60s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** validated 2026-07-20, re-confirmed 2026-07-21 across all 12 plans — all mechanical requirements (TARGET-01, TARGET-02) have automated coverage that runs green under normal and `-O` Python. Remaining sign-off is scientific/visual judgment, tracked separately as live UAT tests in `01-UAT.md` (not a Nyquist gap).
+**Approval:** validated 2026-07-20, re-confirmed 2026-07-21 across all 12 plans, re-confirmed 2026-07-22 across all 15 plans — all mechanical requirements (TARGET-01, TARGET-02) have automated coverage that runs green under normal and `-O` Python. Remaining sign-off is scientific/visual judgment, tracked separately as live UAT tests in `01-UAT.md` (not a Nyquist gap).
 
 ---
 
@@ -137,4 +147,12 @@ updated: 2026-07-21
 |--------|-------|
 | Gaps found | 1 (documentation drift: Per-Task Map, Test Infrastructure, and Manual-Only had not been updated since 2026-07-20 and were missing all 9 tasks/waves from plans 01-04 through 01-12 — 9 gap-closure/hardening plans landed in the interim) |
 | Resolved | 1 (Per-Task Map extended with 26 new rows sourced from each plan's `coverage:` frontmatter in its SUMMARY.md, cross-referenced against `01-VERIFICATION.md`'s live re-run; Test Infrastructure updated to include `tests/test_nsf_fmrg_data.py` and both diagnostic scripts; Manual-Only reconciled against `01-UAT.md`'s current 6-test state. All three test suites re-run live during this audit: `tests/test_targets.py` 27/27 PASS, `tests/test_nsf_fmrg_data.py` 12/12 PASS, `tests/test_run_target_extraction.py` 14/14 PASS (53/53 total); `scripts/check_targets.py --project_dir .` → ALL CHECKS PASSED. No requirement lacks automated coverage — every non-green item is a pre-existing, correctly-routed human-judgment gate (Tests 5-6 in `01-UAT.md`), not a Nyquist gap.) |
+| Escalated | 0 |
+
+## Validation Audit 2026-07-22
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 1 (documentation drift: Per-Task Map, Test Infrastructure, and Manual-Only had not been updated since 2026-07-21 and were missing all 9 tasks/waves from plans 01-13 through 01-15 — 3 further ordering-investigation/gap-closure plans landed in the interim) |
+| Resolved | 1 (Per-Task Map extended with 9 new rows sourced from each plan's `coverage:` frontmatter/SUMMARY task list, cross-referenced against `01-VERIFICATION.md`'s live re-run; Test Infrastructure counts corrected to the live re-run; Manual-Only reconciled against `01-UAT.md`'s current 8-test state (Tests 5/6 marked superseded, Tests 7/8 now the two open pending items, matching `01-VERIFICATION.md`'s `status: human_needed`). All three test suites re-run live during this audit: `tests/test_targets.py` 34/34 PASS, `tests/test_nsf_fmrg_data.py` 13/13 PASS, `tests/test_run_target_extraction.py` 10/10 PASS (57/57 total, normal and `-O` Python); `scripts/check_targets.py --project_dir .` → ALL CHECKS PASSED (normal and `-O`). No requirement lacks automated coverage — every non-green item is a pre-existing, correctly-routed human-judgment gate (Tests 7-8 in `01-UAT.md`), not a Nyquist gap.) |
 | Escalated | 0 |
