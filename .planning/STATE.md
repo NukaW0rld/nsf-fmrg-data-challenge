@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-13-PLAN.md
-last_updated: "2026-07-22T03:22:40.770Z"
+stopped_at: Completed 01-14-PLAN.md
+last_updated: "2026-07-22T03:36:02.536Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 13 of 14 (completed; 1 plan remaining)
-Status: Executing Phase 01 — next: 01-14-PLAN.md (G-01-5 boundary fragmentation)
-Last activity: 2026-07-22 — Completed 01-13-PLAN.md
+Plan: 14 of 14 (completed; 1 plan remaining)
+Status: Ready to execute
+Last activity: 2026-07-22
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 93%
 | Phase 01-target-extraction-contract P11 | 45min | 4 tasks | 11 files |
 | Phase 01 P12 | 2min | 2 tasks | 2 files |
 | Phase 01 P13 | 18min | 3 tasks | 9 files |
+| Phase 01 P14 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Produced 01-SIGNOFF-REQUEST.md naming all 12 regenerated QA figures with per-figure acceptance questions and zero pre-ticked decision checkboxes; sign-off must be recorded via /gsd-verify-work, not self-certified by any plan.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Pre-registered SHAPE_GAP_EDGE_TOLERANCE_MM=0.012mm from measured x-direction shape-gap departures in 01-13-CRITERION.md before any src change; DETREND_MAX_XY_DEGREE=2 selected as the largest shared cap clearing it without regressing bow-removal or y-edge regressions (Amendment A6).
 - [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated all 4 tracks under Amendment A6; the 10-vs-14 width-ordering FLAG persists and widened (track 10 median 0.2589mm vs track 14's 0.4865mm). This was the phase's last authorized bounded cycle for this defect class; 01-13-ORDERING-OUTCOME.md recommends accepting the FLAG as a documented known limitation (option a) for human ratification.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Closed UAT gap G-01-5 (Amendment A7): halfmax_edges now merges noise-fragmented above-half-max runs before candidate selection and gates tracked selection by length plausibility (MAX_RUN_MERGE_GAP_PIXELS=MAX_GAP_PIXELS, MIN_TRACKED_LENGTH_RATIO=HALF_MAX_FRACTION), fixing the diagnosed self-reinforcing wrong-lock mechanism -- verified against the exact Track 8/Track 10 episodes -- but the real 4-track fragmentation/jump-statistic outcome is mixed, not a uniform improvement, and track 10's coverage margin narrowed to a razor-thin 50.50%.
 
 ### Pending Todos
 
@@ -125,6 +127,7 @@ None yet.
 - Restricted raw data is already present in historical commit 831987c; remediate repository history before any external sharing.
 - [Phase 1]: 8>10>14>21 width ordering still not restored (10-vs-14 FLAG, 0.3713mm vs 0.4765mm) after Amendment A5 regeneration — track 10's coverage-collapse defect (option b of 01-08-ORDERING-OUTCOME.md's escalation) is now diagnosed and fixed by plan 01-11 (21/400 → 242/400 valid), so Phase 1 verification sign-off is blocked solely on the remaining human decision to override the ordering criterion (option a), per 01-11-ORDERING-OUTCOME.md.
 - [Phase 1]: 8>10>14>21 width ordering still not restored after Amendment A6 (10-vs-14 FLAG, 0.2589mm vs 0.4865mm, gap widened vs A5) — this was the phase's last authorized bounded, criterion-driven cycle per 01-UAT.md Test 5; 01-13-ORDERING-OUTCOME.md recommends the human verification round ratify option (a), accepting the FLAG as a documented known limitation.
+- [Phase 1]: Plan 01-14's fragmentation/jump-statistic outcome is mixed (worsened contiguous-run counts on tracks 8/10/21; jump statistics improved on some boundaries, worsened on others) and track 10's valid-fraction margin above the 50% floor narrowed to 50.50% -- both, plus the persisting/reshaped 10-vs-14 width-ordering FLAG, are presented in 01-14-ORDERING-OUTCOME.md for the next human verification round (/gsd-verify-work 1) to evaluate.
 
 ## Deferred Items
 
@@ -136,6 +139,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-22T03:22:40.761Z
-Stopped at: Completed 01-13-PLAN.md
+Last session: 2026-07-22T03:36:02.526Z
+Stopped at: Completed 01-14-PLAN.md
 Resume file: None

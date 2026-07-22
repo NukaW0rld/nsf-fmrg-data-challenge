@@ -96,7 +96,7 @@ Plans:
 
 **Wave 13** *(gap closure, blocked on Wave 12 completion)*
 
-- [ ] 01-14-PLAN.md — G-01-5: merge noise-fragmented boundary candidates and gate tracked selection by length plausibility in `halfmax_edges` (Amendment A7), regenerate all 4 tracks, and report the fragmentation/jump-statistic improvement honestly
+- [x] 01-14-PLAN.md — G-01-5: merge noise-fragmented boundary candidates and gate tracked selection by length plausibility in `halfmax_edges` (Amendment A7), regenerate all 4 tracks, and report the fragmentation/jump-statistic improvement honestly
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
