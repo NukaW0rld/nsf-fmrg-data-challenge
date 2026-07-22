@@ -1,46 +1,52 @@
 # Phase 1 Human Sign-Off Request: Target Extraction QA Figures
 
-**Requested:** 2026-07-21
-**Requested by:** Plan 01-12 (gap-closure)
+**Requested:** 2026-07-22
+**Requested by:** Plan 01-15 (gap-closure regeneration of the plan 01-12 original)
 **This document REQUESTS sign-off. It does not grant it.** No checkbox below is ticked, and none may be inferred as approved from this document's existence. Approvals are recorded separately, per the "How to record the outcome" section below.
 
 ---
 
 ## Current state
 
-Verbatim from `01-11-ORDERING-OUTCOME.md` (recorded 2026-07-21, extraction contract Amendment A5 in effect):
+Re-derived live in this execution by running `.venv/bin/python scripts/check_targets.py --project_dir .` against the checked-in `processed_data/targets/` artifacts and reading `processed_data/targets/manifest.json` — not transcribed from any prior plan or outcome report.
 
-**Extraction contract in effect:** Amendment A5 on top of A3/A4 — `DETREND_POLY_ORDER=4`, `fit_mask=bead_exclusion_mask(...)`, `BEAD_MASK_HEIGHT_FRACTION=HALF_MAX_FRACTION=0.5`, `MAX_TRACKING_GAP_COLUMNS=10`, and `max_y_degree=DETREND_MAX_Y_DEGREE=2` on the shared `robust_plane_detrend` call — applied identically to all four tracks with no per-track branch.
+**Extraction contract in effect:** Amendment A7 on top of A3/A4/A5/A6 — `DETREND_POLY_ORDER=4`, `fit_mask=bead_exclusion_mask(...)`, `BEAD_MASK_HEIGHT_FRACTION=HALF_MAX_FRACTION=0.5`, `MAX_TRACKING_GAP_COLUMNS=10`, `max_y_degree=DETREND_MAX_Y_DEGREE=2`, `max_xy_degree=DETREND_MAX_XY_DEGREE=2` on the shared `robust_plane_detrend` call, plus `halfmax_edges` merging adjacent above-half-max sub-runs separated by at most `MAX_RUN_MERGE_GAP_PIXELS=10` samples and gating tracked selection to candidates at least `MIN_TRACKED_LENGTH_RATIO=0.5` of the largest same-column candidate — applied identically to all four tracks with no per-track branch.
 
-**Regenerated results (verbatim from `run_target_extraction.py` / `check_targets.py`):**
+**Artifact generation this document describes:** `run_id` `99a4e8472f0a4164938363af0725f31b`, published `2026-07-22T03:30:49.258468+00:00`, `extraction_params_sha256` `773a25a388dae2954495e4b6f67b2a8c1c7664de01bbb56c005a8bc0e3051c08` (from `processed_data/targets/manifest.json`, read live in this execution).
+
+**Live results (verbatim from `.venv/bin/python scripts/check_targets.py --project_dir .`, run in this execution):**
 
 ```
 track  power_W  valid_bins  median_mm  mean_mm
-    8      400         364     0.7528   0.7370
-   10      350         242     0.3713   0.3234
-   14      300         300     0.4765   0.4246
-   21      200         325     0.1998   0.2579
-Ordering 8 vs 10: 0.7528 mm > 0.3713 mm — PASS
-Ordering 10 vs 14: 0.3713 mm > 0.4765 mm — FLAG
-Ordering 14 vs 21: 0.4765 mm > 0.1998 mm — PASS
+    8      400         361     0.7401   0.7414
+   10      350         202     0.3770   0.3744
+   14      300         301     0.6174   0.6529
+   21      200         308     0.3825   0.4130
+Ordering 8 vs 10: 0.7401 mm > 0.3770 mm — PASS
+Ordering 10 vs 14: 0.3770 mm > 0.6174 mm — FLAG
+Ordering 14 vs 21: 0.6174 mm > 0.3825 mm — PASS
 Ordering FLAG outcomes are documented and never used to tune locked extraction constants.
 ```
 
-**`check_targets.py --project_dir .` exit code: 0** (`ALL CHECKS PASSED` printed).
+**`check_targets.py --project_dir .` exit code: 0** (`ALL CHECKS PASSED` printed, confirmed live in this execution).
 
 **Coverage against the 50% `MIN_VALID_FRACTION` floor (all four tracks clear it):**
 
 | track | power (W) | valid bins | valid fraction | vs 50% floor |
 |---|---:|---:|---:|---|
-| 8 | 400 | 364 | 91.0% | PASS |
-| 10 | 350 | 242 | 60.5% | PASS |
-| 14 | 300 | 300 | 75.0% | PASS |
-| 21 | 200 | 325 | 81.3% | PASS |
+| 8 | 400 | 361 | 90.25% | PASS |
+| 10 | 350 | 202 | 50.50% | PASS (razor-thin margin — see below) |
+| 14 | 300 | 301 | 75.25% | PASS |
+| 21 | 200 | 308 | 77.00% | PASS |
+
+Track 10's 50.50% clears the hard `MIN_VALID_FRACTION = 0.5` floor by only 0.5 percentage points — a margin of 2 bins (202 valid bins against the 200-bin floor) — a **razor-thin margin**, materially tighter than the 60.75% track 10 held under Amendment A6 (`01-13-ORDERING-OUTCOME.md`). This follows `01-14-ORDERING-OUTCOME.md`'s measured 41-bin drop (243 → 202) under Amendment A7's merge-and-plausibility-gate fix.
 
 **Plain-language state:**
-- The 8 > 10 > 14 > 21 width ordering does **not** hold. 8-vs-10 PASSes and 14-vs-21 PASSes, but the 10-vs-14 pair FLAGs: track 10's median (0.3713 mm) remains below track 14's median (0.4765 mm), even though the gap has narrowed substantially since Amendment A4 (track 10's median more than doubled from 0.2509 mm; track 14's dropped from 0.5264 mm).
-- `check_targets.py` passes (exit 0, `ALL CHECKS PASSED`) because the coverage-floor gate — the only hard gate it enforces — is now cleared by all four tracks. It does not gate on the width-ordering FLAG; that is reported as diagnostic output, not a pass/fail check.
-- Track 10's coverage collapse (previously 21/400, 5.2% valid) is resolved (now 242/400, 60.5% valid) — this is a separate, now-closed concern from the still-open 10-vs-14 ordering question.
+- The 8 > 10 > 14 > 21 width ordering does **not** hold. 8-vs-10 PASSes and 14-vs-21 PASSes, but the 10-vs-14 pair FLAGs: track 10's median (0.3770 mm) remains below track 14's median (0.6174 mm).
+- The current absolute 10-vs-14 gap is **0.2404 mm**, and this gap has **roughly doubled** under Amendments A6 and A7 — from 0.1052 mm at the Amendment-A5 generation this document previously described — rather than narrowing. The gap is not described as narrowing, closing, or improving anywhere in this document.
+- `check_targets.py` passes (exit 0, `ALL CHECKS PASSED`) because the coverage-floor gate — the only hard gate it enforces — is cleared by all four tracks. It does not gate on the width-ordering FLAG; that is reported as diagnostic output, not a pass/fail check.
+- Track 10's coverage is **not** a closed concern. It moved from a collapse (21/400, 5.2%), through a comfortable margin under Amendments A5 and A6 (Amendment A6's margin was 60.75%, per `01-13-ORDERING-OUTCOME.md`), to **50.50%** under Amendment A7 — still passing the floor, but now the tightest margin of the four tracks and the one most at risk from any future change.
+- Boundary fragmentation is a **MIXED** outcome, not uniformly improved, under Amendment A7 (`01-14-ORDERING-OUTCOME.md`): contiguous valid-run counts worsened on track 8 (22→25), track 10 (65→67), and track 21 (34→43), and improved only marginally on track 14 (63→61); max adjacent-column jump statistics improved on some boundaries (e.g. both of track 10's) while worsening on others (including both of track 8's). Baseline caveat: the pre-fix numbers above were measured under Amendment A5, so part of this delta reflects Amendment A6's already-accepted effect rather than Amendment A7 alone.
 
 ---
 
