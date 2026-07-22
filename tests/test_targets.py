@@ -427,6 +427,94 @@ def test_edge_divergence_fix_is_track_independent():
     )
 
 
+def _xy_interaction_cap_scenario(scale):
+    # Mirrors tests/test_nsf_fmrg_data.py's _track10_shaped_tail_collapse_scenario,
+    # but exercised through the production targets.DETREND_POLY_ORDER /
+    # targets.DETREND_MAX_Y_DEGREE / targets.DETREND_MAX_XY_DEGREE constants,
+    # to prove the SAME committed constant (not a per-track-tuned value)
+    # clears 01-13-CRITERION.md's tolerance at two substrate magnitudes 40x
+    # apart -- the baseline (scale=1.0: bow=40x, shelf=0.6mm) is roughly
+    # track-10-like per 01-13-CRITERION.md/the debug session's evidence;
+    # scale=1/40 is roughly the other three tracks' much smaller magnitude.
+    x_mm = np.linspace(20.0, 100.0, 2000)
+    y_mm = np.linspace(0.0, 1.911, 480)
+    x_grid, y_grid = np.meshgrid(x_mm, y_mm)
+
+    centered_x = (x_grid - 60.0) / 40.0
+    centered_y = (y_grid - 0.9555) / 0.9555
+    bow_scale = 40.0 * scale
+    shelf_amplitude_mm = 0.6 * scale
+    quartic_bow = bow_scale * (0.08 * centered_x**4 - 0.03 * centered_x**2)
+    substrate = 0.02 * centered_x - 0.01 * centered_y + 0.05 + quartic_bow
+
+    shelf_frac = 0.06
+    edge_band = y_mm < shelf_frac * y_mm[-1]
+    shelf = np.zeros_like(y_grid)
+    shelf[edge_band] = shelf_amplitude_mm * (1.0 - y_grid[edge_band] / (shelf_frac * y_mm[-1]))
+    Z_mm = substrate + shelf
+
+    bead_rows = (y_grid >= 0.8) & (y_grid <= 1.1)
+    Z_mm = Z_mm.copy()
+    Z_mm[bead_rows] += 0.2
+    fit_mask = np.ones(Z_mm.shape, dtype=bool)
+    fit_mask[bead_rows] = False
+    return Z_mm, x_mm, y_mm, fit_mask
+
+
+def _xy_interaction_shape_gap_departure(Z_mm, x_mm, y_mm, fit_mask, max_xy_degree):
+    residual, coef = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm,
+        order=targets.DETREND_POLY_ORDER,
+        fit_mask=fit_mask,
+        max_y_degree=targets.DETREND_MAX_Y_DEGREE,
+        max_xy_degree=max_xy_degree,
+    )
+    require(coef is not None, "the scenario must produce a valid fit")
+    plane = Z_mm - residual
+    low_y_rows = (y_mm >= 0.0) & (y_mm <= 0.5)
+    bead_rows = (y_mm >= 0.7) & (y_mm <= 1.3)
+    interior_idx = int(np.argmin(np.abs(x_mm - 60.0)))
+    far_edge_idx = int(np.argmin(np.abs(x_mm - 99.0)))
+
+    def shape_gap(idx):
+        return (
+            float(np.nanmedian(plane[low_y_rows, idx]))
+            - float(np.nanmedian(plane[bead_rows, idx]))
+        )
+
+    return abs(shape_gap(far_edge_idx) - shape_gap(interior_idx))
+
+
+def test_xy_interaction_cap_is_track_independent():
+    edge_tolerance_mm = 0.012
+    big_scale = 1.0
+    small_scale = big_scale / 40.0
+
+    for label, scale in (("big", big_scale), ("small", small_scale)):
+        Z_mm, x_mm, y_mm, fit_mask = _xy_interaction_cap_scenario(scale)
+        departure = _xy_interaction_shape_gap_departure(
+            Z_mm, x_mm, y_mm, fit_mask, max_xy_degree=targets.DETREND_MAX_XY_DEGREE
+        )
+        require(
+            departure <= edge_tolerance_mm,
+            f"{label}: the shared DETREND_MAX_XY_DEGREE constant must clear the far-edge "
+            "shape-gap tolerance",
+        )
+
+    # The fix is only load-bearing at the large (track-10-like) magnitude:
+    # confirm the uncapped fit still manufactures an edge-of-domain artifact
+    # there, proving the fix (not the scenario) is what clears the tolerance.
+    Z_big, x_mm, y_mm, fit_mask_big = _xy_interaction_cap_scenario(big_scale)
+    uncapped_departure = _xy_interaction_shape_gap_departure(
+        Z_big, x_mm, y_mm, fit_mask_big, max_xy_degree=None
+    )
+    require(
+        uncapped_departure > edge_tolerance_mm,
+        "the uncapped-in-x fit must still manufacture a shape-gap departure at the large "
+        "magnitude, confirming the fix (not the scenario) is what clears the tolerance there",
+    )
+
+
 def test_extraction_params_provenance():
     expected = {
         "TARGET_GRID_START_MM": 20.1,
@@ -445,9 +533,10 @@ def test_extraction_params_provenance():
         "MAX_TRACKING_GAP_COLUMNS": 10,
         "BEAD_MASK_HEIGHT_FRACTION": 0.5,
         "DETREND_MAX_Y_DEGREE": 2,
+        "DETREND_MAX_XY_DEGREE": 2,
     }
 
-    require(targets.extraction_params() == expected, "the exact 16-value extraction parameterization changed")
+    require(targets.extraction_params() == expected, "the exact 17-value extraction parameterization changed")
 
 
 def test_provenance_includes_tracking_gap_and_fix_param():
@@ -499,6 +588,14 @@ def test_provenance_digest_is_change_sensitive():
     finally:
         targets.DETREND_MAX_Y_DEGREE = original_max_y_degree
     require(digest() == baseline, "restoring DETREND_MAX_Y_DEGREE must restore the baseline digest")
+
+    original_max_xy_degree = targets.DETREND_MAX_XY_DEGREE
+    try:
+        targets.DETREND_MAX_XY_DEGREE = 999
+        require(digest() != baseline, "mutating DETREND_MAX_XY_DEGREE must change the provenance digest")
+    finally:
+        targets.DETREND_MAX_XY_DEGREE = original_max_xy_degree
+    require(digest() == baseline, "restoring DETREND_MAX_XY_DEGREE must restore the baseline digest")
 
 
 def test_post_smoothing_crossing_is_invalidated():
@@ -601,6 +698,7 @@ if __name__ == "__main__":
         test_single_parameterization_has_no_track_conditionals,
         test_track_id_does_not_affect_numeric_output,
         test_edge_divergence_fix_is_track_independent,
+        test_xy_interaction_cap_is_track_independent,
         test_extraction_params_provenance,
         test_provenance_includes_tracking_gap_and_fix_param,
         test_provenance_digest_is_change_sensitive,

@@ -158,6 +158,30 @@ def test_polynomial_basis_sizes_are_stable():
         "order=4 with max_y_degree=2 must drop the three cross-track-degree-3/4 terms (12-term basis)",
     )
 
+    # Amendment A6: max_xy_degree further caps the x-exponent of cross terms
+    # (y-exponent >= 1) only, leaving every pure along-track term (j=0) fully
+    # intact. At order=4, max_y_degree=2 (12-term basis), the reduced sizes
+    # are 7/9/11 for max_xy_degree in {0, 1, 2}.
+    expected_xy_capped_sizes = {0: 7, 1: 9, 2: 11}
+    for max_xy_degree, expected_size in expected_xy_capped_sizes.items():
+        _, coef_xy_capped = nsf_fmrg_data.robust_plane_detrend(
+            Z_mm, x_mm, y_mm, order=4, max_y_degree=2, max_xy_degree=max_xy_degree
+        )
+        require(
+            len(coef_xy_capped) == expected_size,
+            f"order=4, max_y_degree=2, max_xy_degree={max_xy_degree} must drop only cross terms "
+            f"whose x-exponent exceeds the cap ({expected_size}-term basis)",
+        )
+
+    _, coef_xy_noop = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm, order=4, max_y_degree=2, max_xy_degree=3
+    )
+    require(
+        len(coef_xy_noop) == len(coef_order_four_capped),
+        "max_xy_degree=3 must be a no-op versus max_xy_degree=None: max_y_degree=2 already caps "
+        "the highest surviving cross-term x-exponent at 3",
+    )
+
 
 def test_detrend_edge_fix_preserves_default_behavior():
     # Amendment A5: the max_y_degree keyword must be off by default, so every
@@ -262,6 +286,91 @@ def test_detrend_does_not_diverge_at_strip_edge():
     )
 
 
+def _track10_shaped_tail_collapse_scenario(bow_scale=40.0, shelf_amplitude_mm=0.6):
+    # Combines (a) an along-track quartic bow scaled roughly 40x larger than
+    # test_order_four_removes_quartic_bow's amplitude -- comparable in scale
+    # to track 10's real ~1.7mm raw along-track drift -- with (b) the
+    # existing y-edge shelf-feature construction from
+    # _track10_shaped_edge_scenario, plus an interior masked bead. This
+    # reproduces the x-direction Runge-type edge effect diagnosed in
+    # .planning/debug/track10-14-ordering-tail-collapse.md: the shared
+    # quartic-in-x/max_y_degree=2 fit's own y-shape prediction error grows
+    # toward the domain's far edge (x=100mm) when the along-track drift is
+    # large enough to strain the constrained cross-term basis.
+    x_mm = np.linspace(20.0, 100.0, 2000)
+    y_mm = np.linspace(0.0, 1.911, 480)
+    x_grid, y_grid = np.meshgrid(x_mm, y_mm)
+
+    centered_x = (x_grid - 60.0) / 40.0
+    centered_y = (y_grid - 0.9555) / 0.9555
+    quartic_bow = bow_scale * (0.08 * centered_x**4 - 0.03 * centered_x**2)
+    substrate = 0.02 * centered_x - 0.01 * centered_y + 0.05 + quartic_bow
+
+    shelf_frac = 0.06
+    edge_band = y_mm < shelf_frac * y_mm[-1]
+    shelf = np.zeros_like(y_grid)
+    shelf[edge_band] = shelf_amplitude_mm * (1.0 - y_grid[edge_band] / (shelf_frac * y_mm[-1]))
+    Z_mm = substrate + shelf
+
+    bead_rows = (y_grid >= 0.8) & (y_grid <= 1.1)
+    Z_mm = Z_mm.copy()
+    Z_mm[bead_rows] += 0.2
+    fit_mask = np.ones(Z_mm.shape, dtype=bool)
+    fit_mask[bead_rows] = False
+    return Z_mm, x_mm, y_mm, fit_mask
+
+
+def _shape_gap_departure(Z_mm, x_mm, y_mm, fit_mask, max_y_degree, max_xy_degree):
+    # Mirrors 01-13-CRITERION.md's metric exactly: the fitted surface's own
+    # low-y-band-vs-bead-band value, compared at the domain's far edge
+    # (x~99mm) against its own interior-midpoint value (x~60mm).
+    residual, coef = nsf_fmrg_data.robust_plane_detrend(
+        Z_mm, x_mm, y_mm, order=4, fit_mask=fit_mask,
+        max_y_degree=max_y_degree, max_xy_degree=max_xy_degree,
+    )
+    require(coef is not None, "the scenario must produce a valid fit")
+    plane = Z_mm - residual
+    low_y_rows = (y_mm >= 0.0) & (y_mm <= 0.5)
+    bead_rows = (y_mm >= 0.7) & (y_mm <= 1.3)
+    interior_idx = int(np.argmin(np.abs(x_mm - 60.0)))
+    far_edge_idx = int(np.argmin(np.abs(x_mm - 99.0)))
+
+    def shape_gap(idx):
+        return (
+            float(np.nanmedian(plane[low_y_rows, idx]))
+            - float(np.nanmedian(plane[bead_rows, idx]))
+        )
+
+    return abs(shape_gap(far_edge_idx) - shape_gap(interior_idx))
+
+
+def test_detrend_caps_xy_interaction_degree_at_domain_edge():
+    # 01-13-CRITERION.md's tolerance: the fitted surface's own y-shape
+    # dependence on x must not depart, at the domain's far edge, from its
+    # own interior-midpoint value by more than SHAPE_GAP_EDGE_TOLERANCE_MM.
+    edge_tolerance_mm = 0.012
+    Z_mm, x_mm, y_mm, fit_mask = _track10_shaped_tail_collapse_scenario()
+
+    uncapped_departure = _shape_gap_departure(
+        Z_mm, x_mm, y_mm, fit_mask, max_y_degree=2, max_xy_degree=None
+    )
+    require(
+        uncapped_departure > edge_tolerance_mm,
+        "today's uncapped-in-x order=4/max_y_degree=2 fit must manufacture an x-direction "
+        "shape-gap departure the synthetic substrate does not itself contain, exceeding the "
+        "criterion's tolerance",
+    )
+
+    capped_departure = _shape_gap_departure(
+        Z_mm, x_mm, y_mm, fit_mask, max_y_degree=2, max_xy_degree=targets.DETREND_MAX_XY_DEGREE
+    )
+    require(
+        capped_departure <= edge_tolerance_mm,
+        "the selected DETREND_MAX_XY_DEGREE cap must bring the far-edge shape-gap departure "
+        "within the criterion's tolerance",
+    )
+
+
 def test_find_track_file_rejects_unanchored_substring_match():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -358,6 +467,7 @@ if __name__ == "__main__":
         test_robust_plane_detrend_fit_mask_excludes_bead_from_fit,
         test_detrend_edge_fix_preserves_default_behavior,
         test_detrend_does_not_diverge_at_strip_edge,
+        test_detrend_caps_xy_interaction_degree_at_domain_edge,
         test_find_track_file_rejects_unanchored_substring_match,
         test_find_track_file_still_resolves_real_dataset_names,
         test_height_map_loader_raises_value_error_when_unresolved,
