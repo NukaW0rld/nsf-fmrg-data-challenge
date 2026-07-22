@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-12-PLAN.md
-last_updated: "2026-07-21T17:07:38.983Z"
-last_activity: 2026-07-21
+stopped_at: Completed 01-13-PLAN.md
+last_updated: "2026-07-22T03:22:40.770Z"
+last_activity: 2026-07-22
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_plans: 14
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 
 ## Current Position
 
-Phase: 01 (target-extraction-contract) — HUMAN VERIFICATION NEEDED
-Plan: 12 of 12 (all plans executed; phase not yet verified complete)
-Status: Awaiting human sign-off — run /gsd-verify-work 1 (see 01-SIGNOFF-REQUEST.md, 01-UAT.md tests 5-6)
-Last activity: 2026-07-21
+Phase: 01 (target-extraction-contract) — EXECUTING
+Plan: 13 of 14 (completed; 1 plan remaining)
+Status: Executing Phase 01 — next: 01-14-PLAN.md (G-01-5 boundary fragmentation)
+Last activity: 2026-07-22 — Completed 01-13-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 01 P10 | 12min | 2 tasks | 3 files |
 | Phase 01-target-extraction-contract P11 | 45min | 4 tasks | 11 files |
 | Phase 01 P12 | 2min | 2 tasks | 2 files |
+| Phase 01 P13 | 18min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Implemented Amendment A5 (DETREND_MAX_Y_DEGREE=2), restoring track 10 to 242/400 (60.5%) valid bins and clearing the MIN_VALID_FRACTION floor; the 10-vs-14 width-ordering FLAG remains unresolved and is left for plan 01-12's human sign-off.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Corrected REQUIREMENTS.md's TARGET-02 status from a false Complete to an honest awaiting-human-sign-off state, citing 01-VERIFICATION.md and 01-11-ORDERING-OUTCOME.md.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Produced 01-SIGNOFF-REQUEST.md naming all 12 regenerated QA figures with per-figure acceptance questions and zero pre-ticked decision checkboxes; sign-off must be recorded via /gsd-verify-work, not self-certified by any plan.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Pre-registered SHAPE_GAP_EDGE_TOLERANCE_MM=0.012mm from measured x-direction shape-gap departures in 01-13-CRITERION.md before any src change; DETREND_MAX_XY_DEGREE=2 selected as the largest shared cap clearing it without regressing bow-removal or y-edge regressions (Amendment A6).
+- [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated all 4 tracks under Amendment A6; the 10-vs-14 width-ordering FLAG persists and widened (track 10 median 0.2589mm vs track 14's 0.4865mm). This was the phase's last authorized bounded cycle for this defect class; 01-13-ORDERING-OUTCOME.md recommends accepting the FLAG as a documented known limitation (option a) for human ratification.
 
 ### Pending Todos
 
@@ -121,6 +124,7 @@ None yet.
 - [Phase 3]: The LOTO harness must be validated leak-free with a dummy predictor before Phase 4 model training starts — this is a hard, non-negotiable gate per research/ARCHITECTURE.md.
 - Restricted raw data is already present in historical commit 831987c; remediate repository history before any external sharing.
 - [Phase 1]: 8>10>14>21 width ordering still not restored (10-vs-14 FLAG, 0.3713mm vs 0.4765mm) after Amendment A5 regeneration — track 10's coverage-collapse defect (option b of 01-08-ORDERING-OUTCOME.md's escalation) is now diagnosed and fixed by plan 01-11 (21/400 → 242/400 valid), so Phase 1 verification sign-off is blocked solely on the remaining human decision to override the ordering criterion (option a), per 01-11-ORDERING-OUTCOME.md.
+- [Phase 1]: 8>10>14>21 width ordering still not restored after Amendment A6 (10-vs-14 FLAG, 0.2589mm vs 0.4865mm, gap widened vs A5) — this was the phase's last authorized bounded, criterion-driven cycle per 01-UAT.md Test 5; 01-13-ORDERING-OUTCOME.md recommends the human verification round ratify option (a), accepting the FLAG as a documented known limitation.
 
 ## Deferred Items
 
@@ -132,6 +136,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-21T17:07:38.974Z
-Stopped at: Completed 01-12-PLAN.md
+Last session: 2026-07-22T03:22:40.761Z
+Stopped at: Completed 01-13-PLAN.md
 Resume file: None

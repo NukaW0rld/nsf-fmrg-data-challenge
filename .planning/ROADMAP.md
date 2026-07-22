@@ -92,7 +92,7 @@ Plans:
 
 **Wave 12** *(gap closure, blocked on Wave 11 completion)*
 
-- [ ] 01-13-PLAN.md — G-01-4: pre-register an outcome-independent criterion for the x-direction (along-track) detrend edge effect, cap cross-track interaction degree (Amendment A6) if the criterion selects it, regenerate all 4 tracks, and report the 10-vs-14 ordering outcome honestly with an option-(a) fallback discussion
+- [x] 01-13-PLAN.md — G-01-4: pre-register an outcome-independent criterion for the x-direction (along-track) detrend edge effect, cap cross-track interaction degree (Amendment A6) if the criterion selects it, regenerate all 4 tracks, and report the 10-vs-14 ordering outcome honestly with an option-(a) fallback discussion
 
 **Wave 13** *(gap closure, blocked on Wave 12 completion)*
 
