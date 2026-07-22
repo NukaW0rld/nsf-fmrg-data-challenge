@@ -146,6 +146,130 @@ def test_halfmax_edges_excludes_clipped_runs_from_tracking_candidates():
     require(np.mean(edges) > y_mm[200], "tracking must never select the nearer boundary-clipped run")
 
 
+def test_merge_adjacent_runs_bridges_short_below_threshold_gaps():
+    max_gap = targets.MAX_RUN_MERGE_GAP_PIXELS
+
+    exact_gap = [(0, 10), (10 + max_gap, 20 + max_gap)]
+    merged = targets.merge_adjacent_runs(exact_gap, max_gap)
+    require(merged == [(0, 20 + max_gap)], "a gap exactly at the merge limit must merge into one run")
+
+    too_far = [(0, 10), (11 + max_gap, 20 + max_gap)]
+    merged_too_far = targets.merge_adjacent_runs(too_far, max_gap)
+    require(merged_too_far == too_far, "a gap one pixel beyond the merge limit must not merge")
+
+    # Three runs each separated by small gaps -- mirrors Track 10's x~67.1mm
+    # 3-way fragmentation into sub-runs of length 5/18/20 -- must all merge
+    # into a single run spanning the full extent.
+    fragmented = [(100, 105), (110, 128), (133, 153)]
+    merged_fragmented = targets.merge_adjacent_runs(fragmented, max_gap)
+    require(merged_fragmented == [(100, 153)], "three closely-spaced fragments must merge into one full-extent run")
+    require(fragmented == [(100, 105), (110, 128), (133, 153)], "merge_adjacent_runs must not mutate the input list")
+
+
+def test_merge_adjacent_runs_does_not_bridge_large_gaps():
+    max_gap = targets.MAX_RUN_MERGE_GAP_PIXELS
+    separated = [(0, 100), (100 + max_gap + 50, 200 + max_gap + 50)]
+    merged = targets.merge_adjacent_runs(separated, max_gap)
+    require(
+        merged == separated,
+        "two substantial runs separated by a gap larger than the merge limit must remain distinct",
+    )
+
+
+def test_halfmax_edges_rejects_implausibly_narrow_tracked_candidate():
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    prof = np.zeros(480, dtype=np.float64)
+    prof[90:140] = 0.02   # large, plausible candidate: len 50
+    prof[200:205] = 0.02  # tiny candidate: len 5, far below 0.5 * 50 = 25
+    previous_center = 0.5 * (y_mm[199] + y_mm[205])  # numerically nearer to the tiny candidate
+
+    edges = targets.halfmax_edges(prof, y_mm, previous_center=previous_center)
+
+    require(edges is not None, "a column with a plausible large candidate must still produce edges")
+    require(
+        np.isclose(np.mean(edges), 0.5 * (y_mm[89] + y_mm[140])),
+        "the plausibility gate must select the large candidate over the nearer tiny one",
+    )
+
+
+def test_merged_run_touching_boundary_remains_excluded():
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    prof = np.zeros(480, dtype=np.float64)
+    prof[5:15] = 0.02
+    prof[20:480] = 0.02  # touches the trailing boundary
+
+    edges = targets.halfmax_edges(prof, y_mm, previous_center=None)
+    require(
+        edges is None,
+        "a run that merges into a boundary-touching span must remain excluded, "
+        "exactly as an originally-clipped run would be",
+    )
+
+
+def test_extract_targets_from_arrays_recovers_from_track8_style_propagating_wrong_lock():
+    # Mirrors the diagnosed Track 8 x=24.1-26.9mm episode
+    # (.planning/debug/boundary-fragmentation-post-continuity-fix.md): a true
+    # bead tracked correctly for several columns, then ONE column where only a
+    # tiny fragment remains (the trigger), then several subsequent columns
+    # where the true bead is present again alongside a tiny candidate near the
+    # now-corrupted anchor (the propagation window).
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    true_bead = np.zeros(480, dtype=np.float64)
+    true_bead[150:350] = 0.02  # len 200
+    tiny_decoy = np.zeros(480, dtype=np.float64)
+    tiny_decoy[10:30] = 0.02  # len 20, far below 0.5 * 200 = 100
+    combined = true_bead.copy()
+    combined[10:30] = 0.02
+
+    profiles = {0: true_bead, 1: true_bead, 2: true_bead, 3: tiny_decoy}
+    for index in range(4, 12):
+        profiles[index] = combined
+    profiles[12] = true_bead
+    Zd, x_actual_mm, y_mm = _binned_synthetic_profiles(profiles)
+
+    # WITHOUT the plausibility gate (documents the pre-fix behavior directly,
+    # mirroring how 01-05's Test 5 first proved the old bug reproduces):
+    # disabling the gate must reproduce the multi-column wrong lock.
+    original_ratio = targets.MIN_TRACKED_LENGTH_RATIO
+    try:
+        targets.MIN_TRACKED_LENGTH_RATIO = 0.0
+        unfixed = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+        for index in range(4, 12):
+            center = np.mean([unfixed["y_lower_mm"][index], unfixed["y_upper_mm"][index]])
+            require(center < 0.5, f"pre-fix behavior must reproduce the wrong lock at column {index}")
+    finally:
+        targets.MIN_TRACKED_LENGTH_RATIO = original_ratio
+
+    # WITH the gate (current, fixed behavior): tracking must recover onto the
+    # true bead at the very next column where it is present, not stay locked.
+    fixed = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+    for index in range(4, 13):
+        center = np.mean([fixed["y_lower_mm"][index], fixed["y_upper_mm"][index]])
+        require(center > 0.5, f"the plausibility gate must stay on the true bead through column {index}")
+
+
+def test_extract_targets_from_arrays_merges_track10_style_fragmented_bead():
+    # Mirrors Track 10's x~67.1mm 3-way fragmentation: a true bead's
+    # above-threshold run splits into 3 adjacent sub-runs (len 5/18/20)
+    # separated by small below-threshold gaps.
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    fragmented = np.zeros(480, dtype=np.float64)
+    fragmented[100:105] = 0.02
+    fragmented[110:128] = 0.02
+    fragmented[133:153] = 0.02
+    profiles = {index: fragmented.copy() for index in range(8)}
+    Zd, x_actual_mm, y_mm = _binned_synthetic_profiles(profiles)
+
+    result = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+    require(np.all(result["valid_mask"][:8]), "the merged bead must remain trackable across every column")
+    expected_width = (153 - 100) * 0.004
+    for index in range(8):
+        require(
+            abs(result["w_mm"][index] - expected_width) < 0.05,
+            f"column {index} must report the merged bead's full width, not a narrow sub-fragment",
+        )
+
+
 def test_bead_mask_rule_is_track_independent():
     y_mm = np.arange(480, dtype=np.float64) * 0.004
     x_actual_mm = 20.0 + 0.004 * np.arange(50, dtype=np.float64)
@@ -534,9 +658,11 @@ def test_extraction_params_provenance():
         "BEAD_MASK_HEIGHT_FRACTION": 0.5,
         "DETREND_MAX_Y_DEGREE": 2,
         "DETREND_MAX_XY_DEGREE": 2,
+        "MAX_RUN_MERGE_GAP_PIXELS": 10,
+        "MIN_TRACKED_LENGTH_RATIO": 0.5,
     }
 
-    require(targets.extraction_params() == expected, "the exact 17-value extraction parameterization changed")
+    require(targets.extraction_params() == expected, "the exact 19-value extraction parameterization changed")
 
 
 def test_provenance_includes_tracking_gap_and_fix_param():
@@ -596,6 +722,22 @@ def test_provenance_digest_is_change_sensitive():
     finally:
         targets.DETREND_MAX_XY_DEGREE = original_max_xy_degree
     require(digest() == baseline, "restoring DETREND_MAX_XY_DEGREE must restore the baseline digest")
+
+    original_merge_gap = targets.MAX_RUN_MERGE_GAP_PIXELS
+    try:
+        targets.MAX_RUN_MERGE_GAP_PIXELS = 999
+        require(digest() != baseline, "mutating MAX_RUN_MERGE_GAP_PIXELS must change the provenance digest")
+    finally:
+        targets.MAX_RUN_MERGE_GAP_PIXELS = original_merge_gap
+    require(digest() == baseline, "restoring MAX_RUN_MERGE_GAP_PIXELS must restore the baseline digest")
+
+    original_ratio = targets.MIN_TRACKED_LENGTH_RATIO
+    try:
+        targets.MIN_TRACKED_LENGTH_RATIO = 0.999
+        require(digest() != baseline, "mutating MIN_TRACKED_LENGTH_RATIO must change the provenance digest")
+    finally:
+        targets.MIN_TRACKED_LENGTH_RATIO = original_ratio
+    require(digest() == baseline, "restoring MIN_TRACKED_LENGTH_RATIO must restore the baseline digest")
 
 
 def test_post_smoothing_crossing_is_invalidated():
@@ -687,6 +829,12 @@ if __name__ == "__main__":
         test_halfmax_edges_prefers_largest_run_without_previous_center,
         test_halfmax_edges_tracks_nearest_run_to_previous_center,
         test_halfmax_edges_excludes_clipped_runs_from_tracking_candidates,
+        test_merge_adjacent_runs_bridges_short_below_threshold_gaps,
+        test_merge_adjacent_runs_does_not_bridge_large_gaps,
+        test_halfmax_edges_rejects_implausibly_narrow_tracked_candidate,
+        test_merged_run_touching_boundary_remains_excluded,
+        test_extract_targets_from_arrays_recovers_from_track8_style_propagating_wrong_lock,
+        test_extract_targets_from_arrays_merges_track10_style_fragmented_bead,
         test_bead_mask_rule_is_track_independent,
         test_extract_targets_from_arrays_boundary_tracking_survives_decoy_blob,
         test_halfmax_edges_resets_stale_history_after_long_invalid_gap,
