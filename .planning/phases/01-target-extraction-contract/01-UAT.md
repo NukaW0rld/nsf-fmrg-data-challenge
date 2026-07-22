@@ -1,16 +1,33 @@
 ---
-status: diagnosed
+status: testing
 phase: 01-target-extraction-contract
 source: [01-VERIFICATION.md]
 started: 2026-07-20T00:54:17Z
-updated: 2026-07-21T20:00:00Z
+updated: 2026-07-22T16:52:30Z
 ---
 
 ## Current Test
 
-[testing complete]
+number: 7
+name: Decide the 10-vs-14 width-ordering FLAG (re-ask against the current Amendment-A7 generation)
+expected: |
+  A recorded decision, with rationale: accept the residual FLAG as a documented, investigated, known limitation (option a, recommended by both 01-13-ORDERING-OUTCOME.md and 01-14-ORDERING-OUTCOME.md), or commission further investigation (option b, though the phase's HONEST-OUTCOME GUARD states no further open-ended tuning cycle is authorized without a new independently-diagnosed root cause).
+  01-SIGNOFF-REQUEST.md's fifth decision checkbox now poses this question with live, current numbers: absolute 10-vs-14 median gap is 0.2404mm, roughly DOUBLED from 0.1052mm at the generation Test 5 (below) originally judged; track 10 coverage is 202/400 = 50.50%, a razor-thin margin above the 0.5 floor (vs 60.5% at Test 5's generation).
+awaiting: user response
 
 ## Tests
+
+### 7. Decide the 10-vs-14 width-ordering FLAG (re-ask against Amendment A7)
+
+expected: |
+  A recorded decision, with rationale: accept the residual FLAG as a documented, investigated, known limitation (option a, recommended by both 01-13-ORDERING-OUTCOME.md and 01-14-ORDERING-OUTCOME.md), or commission further investigation (option b, though the phase's HONEST-OUTCOME GUARD states no further open-ended tuning cycle is authorized without a new independently-diagnosed root cause). This supersedes Test 5's answer (option b), which was given against a since-superseded generation and does not carry forward automatically -- the gap has since doubled and coverage has narrowed further under the Amendment A6/A7 fixes that were built in response to Test 5's own request.
+result: [pending]
+
+### 8. Visual sign-off on 12 regenerated QA figures (re-ask against Amendment A7)
+
+expected: |
+  Open all 12 figures under `processed_data/targets/qa/` (regenerated under Amendment A7, run_id 99a4e8472f0a4164938363af0725f31b) and answer the four questions in `01-SIGNOFF-REQUEST.md`. This supersedes Test 6's answer, which was given against the pre-A7 generation -- 01-14-ORDERING-OUTCOME.md reports the fragmentation outcome as MIXED (not uniformly improved) under A7: contiguous-run counts worsened on tracks 8/10/21, and max adjacent-column jump statistics improved on some boundaries and worsened on others.
+result: [pending]
 
 ### 1. Residual curvature on all four tracks
 
@@ -52,10 +69,10 @@ severity: major
 
 ## Summary
 
-total: 6
+total: 8
 passed: 1
 issues: 5
-pending: 0
+pending: 2
 skipped: 0
 blocked: 0
 
