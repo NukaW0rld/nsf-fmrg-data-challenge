@@ -2,18 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Completed 01-14-PLAN.md
-last_updated: "2026-07-22T16:30:20.285Z"
+stopped_at: Completed 01-15-PLAN.md
+last_updated: "2026-07-22T16:40:21.605Z"
 last_activity: 2026-07-22
-last_activity_desc: Phase 01 planning complete
 progress:
-  total_phases: 1
+  total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 100
 ---
 
@@ -29,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 14 of 14 (completed; 1 plan remaining)
+Plan: 2 of 15
 Status: Ready to execute
-Last activity: 2026-07-22 — Phase 01 planning complete
+Last activity: 2026-07-22
 
 Progress: [██████████] 100%
 
@@ -73,6 +70,7 @@ Progress: [██████████] 100%
 | Phase 01 P12 | 2min | 2 tasks | 2 files |
 | Phase 01 P13 | 18min | 3 tasks | 9 files |
 | Phase 01 P14 | 15min | 2 tasks | 4 files |
+| Phase 01 P15 | 6 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -117,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Pre-registered SHAPE_GAP_EDGE_TOLERANCE_MM=0.012mm from measured x-direction shape-gap departures in 01-13-CRITERION.md before any src change; DETREND_MAX_XY_DEGREE=2 selected as the largest shared cap clearing it without regressing bow-removal or y-edge regressions (Amendment A6).
 - [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated all 4 tracks under Amendment A6; the 10-vs-14 width-ordering FLAG persists and widened (track 10 median 0.2589mm vs track 14's 0.4865mm). This was the phase's last authorized bounded cycle for this defect class; 01-13-ORDERING-OUTCOME.md recommends accepting the FLAG as a documented known limitation (option a) for human ratification.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Closed UAT gap G-01-5 (Amendment A7): halfmax_edges now merges noise-fragmented above-half-max runs before candidate selection and gates tracked selection by length plausibility (MAX_RUN_MERGE_GAP_PIXELS=MAX_GAP_PIXELS, MIN_TRACKED_LENGTH_RATIO=HALF_MAX_FRACTION), fixing the diagnosed self-reinforcing wrong-lock mechanism -- verified against the exact Track 8/Track 10 episodes -- but the real 4-track fragmentation/jump-statistic outcome is mixed, not a uniform improvement, and track 10's coverage margin narrowed to a razor-thin 50.50%.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated 01-SIGNOFF-REQUEST.md against the live Amendment-A7 artifact generation (razor-thin 50.50% track-10 coverage margin, doubled 0.2404mm 10-vs-14 gap, MIXED fragmentation outcome), replacing every stale Amendment-A5 figure; every checkbox remains unticked pending /gsd-verify-work 1.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Reconciled REQUIREMENTS.md's TARGET-02 checkbox (flipped [x] to [ ]) with its own traceability row's 'awaiting human visual sign-off' wording; TARGET-01 left untouched.
 
 ### Pending Todos
 
@@ -142,6 +142,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-22T03:36:02.526Z
-Stopped at: Completed 01-14-PLAN.md
+Last session: 2026-07-22T16:40:21.596Z
+Stopped at: Completed 01-15-PLAN.md
 Resume file: None

@@ -100,7 +100,7 @@ Plans:
 
 **Wave 14** *(gap closure, blocked on Wave 13 completion)*
 
-- [ ] 01-15-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A7 run (razor-thin 50.50% track-10 margin, doubled 10-vs-14 gap, MIXED fragmentation outcome, all 7 amendment constants) and reconcile `REQUIREMENTS.md`'s TARGET-02 checkbox with its traceability row — documentation only, no source/test/constant/pipeline change
+- [x] 01-15-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A7 run (razor-thin 50.50% track-10 margin, doubled 10-vs-14 gap, MIXED fragmentation outcome, all 7 amendment constants) and reconcile `REQUIREMENTS.md`'s TARGET-02 checkbox with its traceability row — documentation only, no source/test/constant/pipeline change
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
