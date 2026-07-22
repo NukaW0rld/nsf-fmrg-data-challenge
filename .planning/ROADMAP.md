@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 14 plans (12 executed, 2 gap-closure plans pending)
+**Plans:** 15 plans (14 executed, 1 gap-closure plan pending)
 
 Plans:
 **Wave 1**
@@ -97,6 +97,10 @@ Plans:
 **Wave 13** *(gap closure, blocked on Wave 12 completion)*
 
 - [x] 01-14-PLAN.md — G-01-5: merge noise-fragmented boundary candidates and gate tracked selection by length plausibility in `halfmax_edges` (Amendment A7), regenerate all 4 tracks, and report the fragmentation/jump-statistic improvement honestly
+
+**Wave 14** *(gap closure, blocked on Wave 13 completion)*
+
+- [ ] 01-15-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A7 run (razor-thin 50.50% track-10 margin, doubled 10-vs-14 gap, MIXED fragmentation outcome, all 7 amendment constants) and reconcile `REQUIREMENTS.md`'s TARGET-02 checkbox with its traceability row — documentation only, no source/test/constant/pipeline change
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
