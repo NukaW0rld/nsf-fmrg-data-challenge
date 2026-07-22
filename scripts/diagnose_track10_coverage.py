@@ -16,11 +16,14 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from targets import (
     BASELINE_PCT,
+    DETREND_MAX_XY_DEGREE,
     DETREND_MAX_Y_DEGREE,
     DETREND_POLY_ORDER,
     HALF_MAX_FRACTION,
+    MAX_RUN_MERGE_GAP_PIXELS,
     MAX_TRACKING_GAP_COLUMNS,
     MIN_PEAK_BASELINE_SEPARATION_MM,
+    MIN_TRACKED_LENGTH_RATIO,
     MIN_VALID_Y_POINTS,
     PEAK_PCT,
     TRACK_IDS,
@@ -28,6 +31,7 @@ from targets import (
     bead_exclusion_mask,
     bin_profile,
     fill_small_gaps,
+    merge_adjacent_runs,
     target_grid,
 )
 from nsf_fmrg_data import load_wyko_asc, robust_plane_detrend
@@ -64,6 +68,7 @@ def production_residual_profile(Z_mm, x_actual_mm, y_mm):
         Z_mm, x_actual_mm, y_mm,
         order=DETREND_POLY_ORDER, fit_mask=fit_mask,
         max_y_degree=DETREND_MAX_Y_DEGREE,
+        max_xy_degree=DETREND_MAX_XY_DEGREE,
     )
     profile = np.nanmedian(Zd, axis=1)
     n = len(profile)
@@ -119,9 +124,10 @@ def classify_column(prof, y_mm, previous_center):
 
     threshold = base + HALF_MAX_FRACTION * (peak - base)
     above = np.where(finite, prof > threshold, False)
+    merged_runs = merge_adjacent_runs(all_true_runs(above), MAX_RUN_MERGE_GAP_PIXELS)
     candidates = [
         (start, stop)
-        for start, stop in all_true_runs(above)
+        for start, stop in merged_runs
         if start != 0 and stop != len(prof)
     ]
     if not candidates:
@@ -129,8 +135,16 @@ def classify_column(prof, y_mm, previous_center):
     if previous_center is None:
         start, stop = min(candidates, key=lambda run: (-(run[1] - run[0]), run[0]))
     else:
+        # Mirrors halfmax_edges' MIN_TRACKED_LENGTH_RATIO plausibility gate:
+        # an implausibly-small candidate can never win purely on midpoint
+        # proximity.
+        max_len = max(stop - start for start, stop in candidates)
+        plausible = [
+            run for run in candidates
+            if (run[1] - run[0]) >= MIN_TRACKED_LENGTH_RATIO * max_len
+        ]
         start, stop = min(
-            candidates,
+            plausible,
             key=lambda run: (
                 abs(y_mm[(run[0] + run[1] - 1) // 2] - previous_center),
                 -(run[1] - run[0]),
