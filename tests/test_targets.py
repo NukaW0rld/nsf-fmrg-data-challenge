@@ -217,9 +217,9 @@ def test_extract_targets_from_arrays_recovers_from_track8_style_propagating_wron
     true_bead = np.zeros(480, dtype=np.float64)
     true_bead[150:350] = 0.02  # len 200
     tiny_decoy = np.zeros(480, dtype=np.float64)
-    tiny_decoy[10:30] = 0.02  # len 20, far below 0.5 * 200 = 100
+    tiny_decoy[10:40] = 0.02  # len 30, far below 0.5 * 200 = 100
     combined = true_bead.copy()
-    combined[10:30] = 0.02
+    combined[10:40] = 0.02
 
     profiles = {0: true_bead, 1: true_bead, 2: true_bead, 3: tiny_decoy}
     for index in range(4, 12):

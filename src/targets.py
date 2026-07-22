@@ -55,6 +55,18 @@ DETREND_MAX_Y_DEGREE = 2
 # brings it to 0.0118mm, comfortably under -- preserving the maximum
 # cross-track fitting capacity that still satisfies the criterion.
 DETREND_MAX_XY_DEGREE = 2
+# Amendment A7: reuses the already-locked D-05/D-06 judgment that a short
+# (<=10 native-pixel) below-criterion stretch should not be treated as a
+# genuine break/separation, now applied to post-threshold run fragmentation
+# (merge_adjacent_runs) instead of raw NaN gaps. Not chosen from the
+# resulting fragmentation count or width ordering.
+MAX_RUN_MERGE_GAP_PIXELS = MAX_GAP_PIXELS
+# Amendment A7: reuses the already-locked D-01/D-03 half-max convention's own
+# fraction -- a tracked candidate whose length falls below half of the
+# largest same-column alternative is not a plausible competing feature under
+# that same convention. Not chosen from the resulting fragmentation count or
+# width ordering.
+MIN_TRACKED_LENGTH_RATIO = HALF_MAX_FRACTION
 
 TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
 TRACK_IDS = tuple(TRACK_POWER_W)
@@ -83,6 +95,8 @@ def extraction_params():
         'BEAD_MASK_HEIGHT_FRACTION': BEAD_MASK_HEIGHT_FRACTION,
         'DETREND_MAX_Y_DEGREE': DETREND_MAX_Y_DEGREE,
         'DETREND_MAX_XY_DEGREE': DETREND_MAX_XY_DEGREE,
+        'MAX_RUN_MERGE_GAP_PIXELS': MAX_RUN_MERGE_GAP_PIXELS,
+        'MIN_TRACKED_LENGTH_RATIO': MIN_TRACKED_LENGTH_RATIO,
     }
 
 
@@ -151,6 +165,24 @@ def all_true_runs(mask):
     return [(int(start), int(stop)) for start, stop in zip(starts, stops)]
 
 
+def merge_adjacent_runs(runs, max_gap):
+    # Combines adjacent above-threshold sub-runs separated by only a few
+    # below-threshold samples into one candidate before clip-exclusion and
+    # selection, so a noise-fragmented true bead is not split into several
+    # competing tiny candidates. `runs` must already be sorted and
+    # non-overlapping (as all_true_runs produces); does not mutate the input.
+    if not runs:
+        return []
+    merged = [runs[0]]
+    for start, stop in runs[1:]:
+        last_start, last_stop = merged[-1]
+        if start - last_stop <= max_gap:
+            merged[-1] = (last_start, stop)
+        else:
+            merged.append((start, stop))
+    return merged
+
+
 def halfmax_edges(prof, y_mm, previous_center=None):
     prof = np.asarray(prof, dtype=np.float64)
     y_mm = np.asarray(y_mm, dtype=np.float64)
@@ -166,11 +198,15 @@ def halfmax_edges(prof, y_mm, previous_center=None):
 
     threshold = base + HALF_MAX_FRACTION * (peak - base)
     above = np.where(finite, prof > threshold, False)
+    # Merge noise-fragmented above-threshold sub-runs before clip-exclusion,
+    # so a merged run that now spans to a boundary is correctly excluded,
+    # exactly as an originally-clipped run would be.
+    merged_runs = merge_adjacent_runs(all_true_runs(above), MAX_RUN_MERGE_GAP_PIXELS)
     # A run clipped by the measured strip has an unknowable true edge and is
     # never a tracking candidate, even when it is closest to prior history.
     candidates = [
         (start, stop)
-        for start, stop in all_true_runs(above)
+        for start, stop in merged_runs
         if start != 0 and stop != len(prof)
     ]
     if not candidates:
@@ -178,8 +214,18 @@ def halfmax_edges(prof, y_mm, previous_center=None):
     if previous_center is None:
         start, stop = min(candidates, key=lambda run: (-(run[1] - run[0]), run[0]))
     else:
+        # An implausibly-small candidate can never win purely on midpoint
+        # proximity: only candidates at least MIN_TRACKED_LENGTH_RATIO of the
+        # largest same-column candidate's length are eligible for selection.
+        # This set is never empty -- the run achieving max_len always
+        # satisfies the inequality.
+        max_len = max(stop - start for start, stop in candidates)
+        plausible = [
+            run for run in candidates
+            if (run[1] - run[0]) >= MIN_TRACKED_LENGTH_RATIO * max_len
+        ]
         start, stop = min(
-            candidates,
+            plausible,
             key=lambda run: (
                 abs(y_mm[(run[0] + run[1] - 1) // 2] - previous_center),
                 -(run[1] - run[0]),
