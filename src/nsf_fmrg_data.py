@@ -221,7 +221,7 @@ def load_wyko_asc(height_dir, track_id, crop_to_common=True):
     }
 
 
-def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit_mask=None, max_y_degree=None):
+def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit_mask=None, max_y_degree=None, max_xy_degree=None):
     Zs = Z_mm[::stride_y, ::stride_x]
     xs = x_mm[::stride_x]
     ys = y_mm[::stride_y]
@@ -235,6 +235,8 @@ def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit
         raise ValueError('order must be a non-negative integer.')
     if max_y_degree is not None and (not isinstance(max_y_degree, (int, np.integer)) or max_y_degree < 0):
         raise ValueError('max_y_degree must be a non-negative integer or None.')
+    if max_xy_degree is not None and (not isinstance(max_xy_degree, (int, np.integer)) or max_xy_degree < 0):
+        raise ValueError('max_xy_degree must be a non-negative integer or None.')
     if valid.sum() < 100:
         return Z_mm.copy(), None
 
@@ -245,6 +247,10 @@ def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit
     ]
     if max_y_degree is not None:
         exponents = [(i, j) for i, j in exponents if j <= max_y_degree]
+    if max_xy_degree is not None:
+        # Only caps cross/interaction terms (y-exponent >= 1); pure
+        # along-track terms (j == 0) are never touched regardless of x-degree.
+        exponents = [(i, j) for i, j in exponents if not (j >= 1 and i > max_xy_degree)]
     x_center = 0.5 * (x_mm[0] + x_mm[-1])
     y_center = 0.5 * (y_mm[0] + y_mm[-1])
     Xs_centered = Xs - x_center

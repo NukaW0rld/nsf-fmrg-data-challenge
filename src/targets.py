@@ -39,6 +39,22 @@ BEAD_MASK_HEIGHT_FRACTION = HALF_MAX_FRACTION
 # edge departure to 0.0238 mm, comfortably under. Preserves the maximum
 # cross-track fitting capacity that still satisfies the criterion.
 DETREND_MAX_Y_DEGREE = 2
+# Amendment A6: fixed a priori after 01-13-CRITERION.md's committed criterion
+# established (by measurement, not by the resulting ordering) the x-direction
+# shape-gap tolerance (fitted surface's own low-y-band-vs-bead-band value at
+# the domain's far edge x~99mm, compared to its own interior-midpoint value
+# at x~60mm, must not depart by more than SHAPE_GAP_EDGE_TOLERANCE_MM=0.012mm
+# on all four tracks). Basis conditioning was already ruled out as a viable
+# mechanism by 01-11-CRITERION.md (column rescaling cannot change a full-rank
+# least-squares fit's fitted values), leaving cross-term x-exponent capping
+# as the sole candidate. 2 is the LARGEST cap that clears the criterion on
+# all four tracks (measured on processed_data/diagnostics/track10_tail_
+# collapse_diagnosis.csv): cap 3 (a no-op vs uncapped, since max_y_degree=2
+# already limits the highest surviving cross-term x-exponent to 3) leaves
+# track 10's departure at 0.0212mm, still above tolerance, while cap 2
+# brings it to 0.0118mm, comfortably under -- preserving the maximum
+# cross-track fitting capacity that still satisfies the criterion.
+DETREND_MAX_XY_DEGREE = 2
 
 TRACK_POWER_W = {8: 400, 10: 350, 14: 300, 21: 200}
 TRACK_IDS = tuple(TRACK_POWER_W)
@@ -66,6 +82,7 @@ def extraction_params():
         'MAX_TRACKING_GAP_COLUMNS': MAX_TRACKING_GAP_COLUMNS,
         'BEAD_MASK_HEIGHT_FRACTION': BEAD_MASK_HEIGHT_FRACTION,
         'DETREND_MAX_Y_DEGREE': DETREND_MAX_Y_DEGREE,
+        'DETREND_MAX_XY_DEGREE': DETREND_MAX_XY_DEGREE,
     }
 
 
@@ -312,6 +329,7 @@ def extract_track_targets(height_dir, track_id):
         order=DETREND_POLY_ORDER,
         fit_mask=fit_mask,
         max_y_degree=DETREND_MAX_Y_DEGREE,
+        max_xy_degree=DETREND_MAX_XY_DEGREE,
     )
     if coef is None:
         raise ValueError(f'Plane detrending failed for {expected_name}.')
