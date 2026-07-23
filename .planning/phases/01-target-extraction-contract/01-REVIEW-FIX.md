@@ -5,8 +5,8 @@ review_path: .planning/phases/01-target-extraction-contract/01-REVIEW.md
 iteration: 1
 findings_in_scope: 1
 fixed: 1
-skipped: 3
-status: partial
+skipped: 0
+status: all_fixed
 ---
 
 # Phase 01: Code Review Fix Report
@@ -18,7 +18,7 @@ status: partial
 **Summary:**
 - Findings in scope: 1 (0 Critical + 1 Warning; `fix_scope: critical_warning`)
 - Fixed: 1
-- Skipped: 3 (Info tier, out of scope for this fix pass)
+- Skipped: 0 (all in-scope findings fixed; 3 Info-tier findings are out of scope for `critical_warning` and untouched — see below)
 
 ## Fixed Issues
 
@@ -28,7 +28,7 @@ status: partial
 **Commits:** `44ac9dc`, `cba53f2`
 **Applied fix:** Imported `DETREND_MAX_XY_DEGREE`, `MAX_RUN_MERGE_GAP_PIXELS`, `MIN_TRACKED_LENGTH_RATIO`, and `merge_adjacent_runs` from `targets`. `production_residual_profile` now passes `max_xy_degree=DETREND_MAX_XY_DEGREE` to `robust_plane_detrend`, matching `targets.extract_track_targets`. `classify_column` now applies `merge_adjacent_runs` (Amendment A7 run-merging) before building candidates, and applies the `MIN_TRACKED_LENGTH_RATIO` plausibility gate when `previous_center` is set — mirroring `targets.halfmax_edges` exactly. Regenerated the checked-in `processed_data/diagnostics/track10_coverage_diagnosis.csv` by re-running the corrected script against the checked-in raw height-map data: track 10's `rejection_ok` moved from 255 to 202, now exactly matching the production `valid_mask.sum() == 202` the review used as ground truth (previously a ~21% discrepancy).
 
-## Skipped Issues (out of scope: Info tier, not requested by `--fix` without `--all`)
+## Out of Scope (Info tier, not requested by `--fix` without `--all`)
 
 ### IN-01: Unused `import json` in `src/nsf_fmrg_data.py`
 Not fixed — Info-tier finding, out of scope for `critical_warning` fix scope. Re-run with `--all` to include.
