@@ -1,19 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 01-target-extraction-contract
 source: [01-VERIFICATION.md]
 started: 2026-07-20T00:54:17Z
-updated: 2026-07-22T16:52:30Z
+updated: 2026-07-22T19:20:00Z
 ---
 
 ## Current Test
 
-number: 7
-name: Decide the 10-vs-14 width-ordering FLAG (re-ask against the current Amendment-A7 generation)
-expected: |
-  A recorded decision, with rationale: accept the residual FLAG as a documented, investigated, known limitation (option a, recommended by both 01-13-ORDERING-OUTCOME.md and 01-14-ORDERING-OUTCOME.md), or commission further investigation (option b, though the phase's HONEST-OUTCOME GUARD states no further open-ended tuning cycle is authorized without a new independently-diagnosed root cause).
-  01-SIGNOFF-REQUEST.md's fifth decision checkbox now poses this question with live, current numbers: absolute 10-vs-14 median gap is 0.2404mm, roughly DOUBLED from 0.1052mm at the generation Test 5 (below) originally judged; track 10 coverage is 202/400 = 50.50%, a razor-thin margin above the 0.5 floor (vs 60.5% at Test 5's generation).
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -21,13 +16,16 @@ awaiting: user response
 
 expected: |
   A recorded decision, with rationale: accept the residual FLAG as a documented, investigated, known limitation (option a, recommended by both 01-13-ORDERING-OUTCOME.md and 01-14-ORDERING-OUTCOME.md), or commission further investigation (option b, though the phase's HONEST-OUTCOME GUARD states no further open-ended tuning cycle is authorized without a new independently-diagnosed root cause). This supersedes Test 5's answer (option b), which was given against a since-superseded generation and does not carry forward automatically -- the gap has since doubled and coverage has narrowed further under the Amendment A6/A7 fixes that were built in response to Test 5's own request.
-result: [pending]
+result: pass
+decision: "Option (a) selected: accept the Track 10-vs-14 FLAG as a documented known limitation. Rationale (verbatim): 'The evidence meets the honest-outcome guard: Four investigation cycles have addressed independently diagnosed defect classes. The latest two produced genuine, verified fixes without outcome-driven tuning. The expected ordering still does not hold; the gap increased to 0.2404 mm. Track 10 coverage remains technically valid but marginal at 50.50%.' Recorded as FLAG-accepted (not PASS); valid detrending/boundary-tracker fixes retained; further ordering-related tuning frozen; reopen only on a new independently-supported root-cause hypothesis. Track 10's near-floor coverage explicitly noted as an open risk. Recorded in 01-SIGNOFF-REQUEST.md's fifth decision checkbox."
 
 ### 8. Visual sign-off on 12 regenerated QA figures (re-ask against Amendment A7)
 
 expected: |
   Open all 12 figures under `processed_data/targets/qa/` (regenerated under Amendment A7, run_id 99a4e8472f0a4164938363af0725f31b) and answer the four questions in `01-SIGNOFF-REQUEST.md`. This supersedes Test 6's answer, which was given against the pre-A7 generation -- 01-14-ORDERING-OUTCOME.md reports the fragmentation outcome as MIXED (not uniformly improved) under A7: contiguous-run counts worsened on tracks 8/10/21, and max adjacent-column jump statistics improved on some boundaries and worsened on others.
-result: [pending]
+result: issue
+reported: "Would not grant full visual sign-off. 1) Residual maps: Yes -- tracks 8/10/14 show localized or alternating variation rather than a coherent track-wide bow; track 21 has the strongest broad lobes but they read as process/substrate variation; no manufactured y-edge feature apparent on track 10. 2) Boundary overlays: No -- grey invalid-region shading is explicit and traces are not bridged across gaps (this part passes), but continuity does not: track 10 remains severely fragmented; tracks 14 and 21 have frequent EKG-like jumps; track 8 is better but still has conspicuous excursions near ~24-27, 48-55, 81-86, and 97-100mm. 3) Width/crop edges: No full sign-off -- track 10's old connected terminal V-spike is gone (98.7-99.1mm sequence now ~0.121->0.140->0.146mm followed by gaps, vs 0.228->0.147->0.800mm), but only one isolated valid sample exists inside its right orange band; track 21 ends 0.356->0.340->0.107mm inside that band, an implausibly abrupt terminal drop; track 8's and track 14's valid right-edge samples look plausible; all four left bands lack valid samples (not assessable). 4) Locked constants: Yes, on auditable repository evidence -- recorded criteria/commit sequence show evidence preceding implementation and ordering inspection; A5/A6 have explicit pre-registered criteria; A7 reuses already-locked values; all seven constants remain shared with no per-track conditional (01-CONTEXT.md:39, src/targets.py:21); checker prints ALL CHECKS PASSED, though this cannot prove unrecorded private inspection. Overall: the automated checker passing does not override the visual boundary and crop-edge findings."
+severity: major
 
 ### 1. Residual curvature on all four tracks
 
@@ -70,9 +68,9 @@ severity: major
 ## Summary
 
 total: 8
-passed: 1
-issues: 5
-pending: 2
+passed: 2
+issues: 6
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -134,7 +132,9 @@ blocked: 0
 
 - gap_id: G-01-4
   truth: "The 10-vs-14 width-ordering FLAG is resolved on evidence: either track 10 physically narrows/disappears after x≈70mm, or extraction is losing the physical bead there."
-  status: failed
+  status: resolved
+  resolved_by: "01-13-PLAN.md"
+  resolved_at: "2026-07-22"
   reason: "User reported: the 10-vs-14 inversion is strongly localized, not a uniform gap. Through 20-70mm tracks 10 and 14 are tied on common valid positions (0.4493 vs 0.4495mm); from 70-100mm track 10 collapses to 0.0213mm vs track 14's 0.4843mm, and track 10 exceeds track 14 at only 8.3% of common positions in that region. track_10_overlay.png shows boundaries becoming narrow and fragmented past ~70mm while visible track structure appears to continue. User authorized exactly one further bounded, diagnosis-only investigation: compare raw cross-sections, candidate half-max runs, rejection reasons, and boundary reacquisition before/after 70mm on track 10; pre-register assessment criteria and prohibit choosing constants based on whether 10 > 14. If raw-data evidence confirms genuine physical narrowing or inadequate observability, accept option (a) (documented known limitation) immediately — no further open-ended tuning cycle is authorized."
   severity: major
   test: 5
@@ -150,7 +150,9 @@ blocked: 0
 
 - gap_id: G-01-5
   truth: "Boundary overlays are continuous and physically plausible (no unacceptable fragmentation or abrupt excursions), confirmed on the regenerated QA figures under the Amendment A5 contract."
-  status: failed
+  status: resolved
+  resolved_by: "01-14-PLAN.md"
+  resolved_at: "2026-07-22"
   reason: "User reported (visual sign-off, Test 6): gap handling passes (grey shading, NaN-broken traces, no interpolation), but boundaries remain fragmented and physically implausible even after the continuity-tracking fix (01-05/G-01-2). Track 10 has 65 separate valid runs and collapses toward near-zero width after ~70mm; tracks 8, 14, and 21 also retain abrupt excursions; maximum adjacent boundary jumps are ~0.62-0.88mm across the four tracks. This is a regression/still-open finding against G-01-2's truth after its fix — recorded as a new gap per verify-work's reconciliation rule rather than reopening the resolved gap."
   severity: major
   test: 6
@@ -165,3 +167,14 @@ blocked: 0
     - "Merge adjacent above-threshold sub-runs separated by only a few below-threshold samples before candidate enumeration, so a noise-fragmented true bead is not split into competing tiny candidates"
     - "Consider a DP/Viterbi-style boundary tracker optimizing the whole column sequence jointly (as originally suggested for G-01-2), which would address the self-reinforcing-lock problem more fundamentally than a per-column greedy gate"
   debug_session: ".planning/debug/boundary-fragmentation-post-continuity-fix.md"
+
+- gap_id: G-01-6
+  truth: "Full visual sign-off is granted on all 12 regenerated QA figures under Amendment A7: residual maps acceptable, boundary overlays continuous, crop-edge behavior plausible, locked constants confirmed."
+  status: failed
+  reason: "User reported (visual sign-off, Test 8, re-asked against Amendment A7): residual maps pass and locked-constant provenance passes, but boundary overlays still fail (track 10 remains severely fragmented; tracks 14 and 21 have frequent EKG-like jumps; track 8 still has conspicuous excursions near ~24-27, 48-55, 81-86, and 97-100mm) and width/crop-edge behavior does not get full sign-off (track 10's old terminal V-spike is gone but its right crop-edge band now has only one isolated valid sample; track 21's right crop-edge band ends with an implausibly abrupt terminal drop 0.356->0.340->0.107mm; all four left bands are unassessable). This is a regression/still-open finding against G-01-5's truth after its fix (01-14-PLAN.md) -- recorded as a new gap per verify-work's reconciliation rule rather than reopening the resolved gap."
+  severity: major
+  test: 8
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
