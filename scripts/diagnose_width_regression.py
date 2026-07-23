@@ -15,6 +15,9 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
 from targets import (
+    DETREND_MAX_XY_DEGREE,
+    DETREND_MAX_Y_DEGREE,
+    DETREND_POLY_ORDER,
     MAX_TRACKING_GAP_COLUMNS,
     TRACK_IDS,
     TRACK_POWER_W,
@@ -49,14 +52,17 @@ def extract_swept(Zd, x_actual_mm, y_mm, continuity):
     y_upper_raw = np.full(n, np.nan, dtype=np.float64)
     y_lower_raw = np.full(n, np.nan, dtype=np.float64)
     previous_center = None
+    previous_length_mm = None
     invalid_run_columns = 0
 
     for i, x_center in enumerate(x_grid):
         if continuity and invalid_run_columns >= MAX_TRACKING_GAP_COLUMNS:
             previous_center = None
+            previous_length_mm = None
         query_center = previous_center if continuity else None
+        query_length_mm = previous_length_mm if continuity else None
 
-        prof = bin_profile(Zd, x_actual_mm, x_center)
+        prof = bin_profile(Zd, x_actual_mm, x_center, inclusive_upper=(i == n - 1))
         if prof is None:
             invalid_run_columns += 1
             continue
@@ -64,7 +70,9 @@ def extract_swept(Zd, x_actual_mm, y_mm, continuity):
         if not ok:
             invalid_run_columns += 1
             continue
-        edges = halfmax_edges(prof, y_mm, previous_center=query_center)
+        edges = halfmax_edges(
+            prof, y_mm, previous_center=query_center, previous_length_mm=query_length_mm,
+        )
         if edges is None:
             invalid_run_columns += 1
             continue
@@ -72,6 +80,7 @@ def extract_swept(Zd, x_actual_mm, y_mm, continuity):
         y_lower_raw[i], y_upper_raw[i] = edges
         if continuity:
             previous_center = 0.5 * (edges[0] + edges[1])
+            previous_length_mm = edges[1] - edges[0]
         invalid_run_columns = 0
 
     y_lower, y_upper, w_mm, valid_mask = finalize_smoothed_boundaries(y_lower_raw, y_upper_raw)
@@ -96,12 +105,37 @@ def ordering_verdict(medians):
     return 'PASS' if all(a > b for a, b in zip(values, values[1:])) else 'FLAG'
 
 
-def build_row(order, continuity, bead_mask, medians):
-    row = {'detrend_order': order, 'continuity': continuity, 'bead_mask': bead_mask}
+def build_row(order, continuity, bead_mask, medians, production=False, max_y_degree=None, max_xy_degree=None):
+    row = {
+        'detrend_order': order,
+        'continuity': continuity,
+        'bead_mask': bead_mask,
+        'production': production,
+        'max_y_degree': '' if max_y_degree is None else max_y_degree,
+        'max_xy_degree': '' if max_xy_degree is None else max_xy_degree,
+    }
     for track_id in TRACK_IDS:
         row[f'median_width_{track_id}'] = medians[track_id]
     row['ordering_verdict'] = ordering_verdict(medians)
     return row
+
+
+def _medians_for_config(raw_dir, order, bead_mask, continuity, max_y_degree=None, max_xy_degree=None):
+    height_dir = raw_dir / "height_maps"
+    medians = {}
+    for track_id in TRACK_IDS:
+        data = load_wyko_asc(height_dir, track_id)
+        fit_mask = bead_exclusion_mask(data['Z_mm']) if bead_mask else None
+        Zd, coef = robust_plane_detrend(
+            data['Z_mm'], data['x_actual_mm'], data['y_mm'],
+            order=order, fit_mask=fit_mask,
+            max_y_degree=max_y_degree, max_xy_degree=max_xy_degree,
+        )
+        if coef is None:
+            medians[track_id] = None
+            continue
+        medians[track_id] = track_median_width_mm(Zd, data['x_actual_mm'], data['y_mm'], continuity)
+    return medians
 
 
 def run_sweep(raw_dir):
@@ -128,11 +162,27 @@ def run_sweep(raw_dir):
                         continue
                     medians[track_id] = track_median_width_mm(Zd, x_actual_mm, y_mm, continuity)
                 rows.append(build_row(order, continuity, bead_mask, medians))
+
+    # Dedicated "actual production" row: exactly mirrors
+    # targets.extract_track_targets's detrend call (order=DETREND_POLY_ORDER,
+    # fit_mask via bead_exclusion_mask, max_y_degree=DETREND_MAX_Y_DEGREE,
+    # max_xy_degree=DETREND_MAX_XY_DEGREE) plus always-on Mechanism B history
+    # tracking (extract_swept threads previous_length_mm when continuity=True,
+    # matching extract_targets_from_arrays's unconditional tracking). No other
+    # row in this sweep is comparable to what src/targets.py actually ships.
+    production_medians = _medians_for_config(
+        raw_dir, DETREND_POLY_ORDER, bead_mask=True, continuity=True,
+        max_y_degree=DETREND_MAX_Y_DEGREE, max_xy_degree=DETREND_MAX_XY_DEGREE,
+    )
+    rows.append(build_row(
+        DETREND_POLY_ORDER, True, True, production_medians,
+        production=True, max_y_degree=DETREND_MAX_Y_DEGREE, max_xy_degree=DETREND_MAX_XY_DEGREE,
+    ))
     return rows
 
 
 def print_sweep_table(rows):
-    header = "order  continuity  bead_mask  " + "  ".join(
+    header = "order  continuity  bead_mask  production  " + "  ".join(
         f"track_{tid}(w={TRACK_POWER_W[tid]}W)" for tid in TRACK_IDS
     ) + "  verdict"
     print(f"\n{header}")
@@ -143,12 +193,15 @@ def print_sweep_table(rows):
         )
         print(
             f"{row['detrend_order']:>5}  {str(row['continuity']):>10}  "
-            f"{str(row['bead_mask']):>9}  {values}  {row['ordering_verdict']}"
+            f"{str(row['bead_mask']):>9}  {str(row['production']):>10}  {values}  {row['ordering_verdict']}"
         )
 
 
 def write_sweep_csv(csv_path, rows):
-    fieldnames = ['detrend_order', 'continuity', 'bead_mask'] + [f'median_width_{tid}' for tid in TRACK_IDS] + ['ordering_verdict']
+    fieldnames = (
+        ['detrend_order', 'continuity', 'bead_mask', 'production', 'max_y_degree', 'max_xy_degree']
+        + [f'median_width_{tid}' for tid in TRACK_IDS] + ['ordering_verdict']
+    )
     with csv_path.open('w', newline='', encoding='utf-8') as stream:
         writer = csv.DictWriter(stream, fieldnames=fieldnames)
         writer.writeheader()

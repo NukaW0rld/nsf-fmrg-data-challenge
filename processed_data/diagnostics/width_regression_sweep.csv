@@ -1,0 +1,14 @@
+detrend_order,continuity,bead_mask,production,max_y_degree,max_xy_degree,median_width_8,median_width_10,median_width_14,median_width_21,ordering_verdict
+1,True,True,False,,,0.896513,0.790278,0.713300,0.817736,FLAG
+1,False,True,False,,,0.896513,0.784817,0.716492,0.821852,FLAG
+1,True,False,False,,,0.923887,0.765678,0.771237,0.870554,FLAG
+1,False,False,False,,,0.923887,0.762809,0.775726,0.882333,FLAG
+2,True,True,False,,,0.779155,0.299229,0.698267,0.645757,FLAG
+2,False,True,False,,,0.779087,0.256754,0.710218,0.645757,FLAG
+2,True,False,False,,,0.685642,0.589672,0.614825,0.745508,FLAG
+2,False,False,False,,,0.685235,0.589570,0.622901,0.779500,FLAG
+4,True,True,False,,,0.769849,0.249970,0.670431,0.663108,FLAG
+4,False,True,False,,,0.767473,0.249970,0.672120,0.658404,FLAG
+4,True,False,False,,,0.562125,0.557140,0.664688,0.834524,FLAG
+4,False,False,False,,,0.593484,0.578063,0.681139,0.852183,FLAG
+4,True,True,True,2,2,0.764599,0.416075,0.711952,0.612263,FLAG
