@@ -1,159 +1,136 @@
 ---
 phase: 01-target-extraction-contract
-verified: 2026-07-21T18:30:00Z
-status: human_needed
-score: 4/6 must-haves verified
+verified: 2026-07-22T22:30:00Z
+status: gaps_found
+score: 3/4 must-haves verified
 behavior_unverified: 0
-overrides_applied: 0
+overrides_applied: 1
+overrides:
+  - must_have: "Running the extractor on all 4 tracks produces the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21)"
+    reason: "The 10-vs-14 pair has FLAGged across five extraction amendments (A5-A8) and four independently-diagnosed investigation cycles (01-06→08, 01-11, 01-13, 01-16). A human reviewer explicitly recorded acceptance of this residual FLAG as a documented, investigated, known limitation via /gsd-verify-work Test 7 (01-UAT.md), with the project's own HONEST-OUTCOME GUARD prohibiting further open-ended tuning absent a new independently-diagnosed root cause. 01-16-ORDERING-OUTCOME.md (Amendment A8) explicitly does not reopen this decision. Accepted here on the same basis, not re-litigated -- but flagged below (Gap 1) because the sign-off document describing this decision now quotes stale (pre-Amendment-A8) numbers and the gap widened materially (0.2404mm -> 0.3182mm, +32%) since the decision was recorded."
+    accepted_by: "human reviewer via /gsd-verify-work 1, Test 7 (01-UAT.md)"
+    accepted_at: "2026-07-22"
 re_verification:
-  previous_status: gaps_found
-  previous_score: 5/7
+  previous_status: human_needed
+  previous_score: 3/4
   gaps_closed:
-    - "check_targets.py now fails closed on coverage violations via a hard MIN_VALID_FRACTION=0.5 require() gate (01-10) — confirmed live: exit 0 today only because all 4 tracks clear >=60.5% coverage; previously exit 0 was printed even at track 10's 5.2% coverage."
-    - "Publish-path symlink exploit (CR-03) is closed: reject_symlink_path() rejects a symlinked candidate or in-repo symlinked ancestor before any resolve/rmtree/rename, and publish_staging_dir() re-checks is_symlink() immediately before every destructive op (01-10) — 4 dedicated regression tests pass (test_symlink_at_backup_path_is_rejected, test_symlink_at_processed_data_is_rejected, test_publish_refuses_symlinked_backup_immediately_before_rmtree, test_symlink_output_into_raw_is_rejected)."
-    - "Track 10's catastrophic coverage collapse (21/400, 5.2%) is diagnosed as a detrend-fitting edge artifact and fixed via Amendment A5 (DETREND_MAX_Y_DEGREE=2, 01-11), restoring track 10 to 242/400 (60.5%) — a representative, non-degenerate sample, no longer failing check_targets.py's coverage gate."
+    - "G-01-6 (UAT Test 8, boundary fragmentation/crop-edge): Amendment A8 (plan 01-16) closed Mechanism A (merge-before-clip ordering defect, 65-90% of no_candidates invalidations) and Mechanism B (same-column gate blind spot in single-candidate columns, 14-72% of tracked selections). Both specific crop-edge symptoms UAT Test 8 named (track 10's isolated valid run, track 21's near-zero terminal drop) are confirmed resolved on the regenerated artifacts. Coverage increased on every track (368/232/309/338 vs 361/202/301/308) and contiguous-run fragmentation improved on 3 of 4 tracks (track 21 -51%)."
   gaps_remaining:
-    - "The 10-vs-14 width-ordering pair still FLAGs even after track 10's coverage fix (0.3713mm vs 0.4765mm, per 01-11-ORDERING-OUTCOME.md) — this is reclassified below from a code-level FAILED gap to a human override-vs-investigate decision, since two independent, honest diagnostic/fix cycles (01-06/07/08 and 01-11) have already been run against this exact defect class without forcing the outcome."
-    - "Visual sign-off on all 12 regenerated QA figures has not occurred — 01-SIGNOFF-REQUEST.md exists, is actionable, and has 0 ticked checkboxes."
+    - "01-SIGNOFF-REQUEST.md was NOT regenerated after Amendment A8 -- it still describes the superseded Amendment A7 generation (run_id 99a4e8472f0a4164938363af0725f31b, 361/202/301/308 valid bins) while the live production artifacts are Amendment A8 (run_id b3f79f207cc1431fa238bb153c04419b, 368/232/309/338 valid bins). This is the exact class of staleness previously found and fixed by plan 01-15 for the A6->A7 transition, now recurred for A7->A8."
+    - "No human visual sign-off round has occurred against the Amendment A8 QA figures. UAT Test 8's visual review was performed against Amendment-A7-era images; all 12 PNGs under processed_data/targets/qa/ have since been regenerated with materially different fragmentation counts and crop-edge behavior. G-01-6's status in 01-UAT.md's own Gaps section is still 'failed' (not updated to 'resolved')."
   regressions: []
-behavior_unverified_items: []
-human_verification:
-  - test: "Decide the 10-vs-14 width-ordering FLAG: accept it as a documented, known limitation (human override, 01-SIGNOFF-REQUEST.md option (a)) or commission a further diagnosed-defect investigation (option (b))."
-    expected: "A recorded decision. If (a): rationale recorded and carried as a caveat in ROADMAP.md/REQUIREMENTS.md before Phase 2 starts. If (b): a new gap-closure plan targeting the 10-vs-14 relationship specifically, without touching the now-resolved coverage fix."
-    why_human: "This is an explicit scientific/product judgment call the phase's own HONEST-OUTCOME GUARD defers to a human — the constants (DETREND_POLY_ORDER, BEAD_MASK_HEIGHT_FRACTION, MAX_TRACKING_GAP_COLUMNS, DETREND_MAX_Y_DEGREE) were each fixed from residual/physical/numerical evidence before this outcome was inspected, and the project has explicitly committed to not tuning further in response to the ordering result. No grep or test can decide whether the residual gap is acceptable."
-  - test: "Open all 12 regenerated QA figures under processed_data/targets/qa/ at full resolution (residual maps, boundary overlays, width curves for tracks 8/10/14/21) and answer the four questions in 01-SIGNOFF-REQUEST.md."
-    expected: "Residual structure is scientifically acceptable process/substrate variation on all 4 tracks; boundary overlays are continuous and physically plausible with explicit (not silently bridged) gap shading, including track 10; track 10's terminal V-spike from prior UAT is confirmed gone; the four locked constants are confirmed fixed independently of the ordering outcome."
-    why_human: "This verification's own visual inspection of track_10_overlay.png and track_10_width.png shows a real, continuous boundary trace across most of the 20-100mm span (a major improvement over the prior verification's near-total absence of trace), but the trace is visibly more jagged/spiky than tracks 8 and 21's, and the width curve degrades toward near-zero past x=70mm. Whether this level of noise is 'sane' (D-14 bow/curvature and sawtooth criteria) versus still-borderline is a domain judgment beyond what grep/structural checks can certify — exactly what 01-SIGNOFF-REQUEST.md asks a human to confirm."
+gaps:
+  - truth: "QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps)."
+    status: failed
+    reason: "The vehicle this project uses to request/record human visual sign-off (01-SIGNOFF-REQUEST.md) is stale relative to the current production artifacts, and no fresh visual review round has occurred against the current (Amendment A8) images. G-01-6 (the UAT gap this success criterion maps to) remains 'status: failed' in 01-UAT.md's own gap-tracking, not updated to 'resolved', despite plan 01-16's code-level fixes."
+    artifacts:
+      - path: ".planning/phases/01-target-extraction-contract/01-SIGNOFF-REQUEST.md"
+        issue: "Describes run_id 99a4e8472f0a4164938363af0725f31b (Amendment A7: valid bins 361/202/301/308; medians 0.7401/0.3770/0.6174/0.3825mm; 10-vs-14 gap 0.2404mm), but processed_data/targets/manifest.json's live run_id is b3f79f207cc1431fa238bb153c04419b (Amendment A8: valid bins 368/232/309/338; medians 0.7653/0.3940/0.7122/0.6308mm; 10-vs-14 gap 0.3182mm, +32%). A human granting sign-off against this document today would be confirming a superseded narrative even though the linked image files on disk are current."
+    missing:
+      - "Regenerate 01-SIGNOFF-REQUEST.md against the live Amendment A8 check_targets.py output and manifest.json (mirroring plan 01-15's precedent for the A6->A7 transition): update run_id, published timestamp, extraction_params_sha256 cross-check, the summary table, the coverage table, the plain-language state paragraphs (including the widened 10-vs-14 gap and Amendment A8's fragmentation/coverage before/after), and the 'Contract in effect' table (Amendment A8's clip-before-merge reorder and history-based gate)."
+      - "Run a fresh human visual sign-off round (/gsd-verify-work 1) against the regenerated document and the current 12 QA PNGs, since the prior visual review (UAT Test 8) was performed against Amendment-A7-era images that have since changed materially on every track."
+      - "Update G-01-6's status in 01-UAT.md's Gaps section from 'failed' to 'resolved' (or a new gap, if the fresh visual review still finds issues) once that round completes."
 ---
 
 # Phase 1: Target Extraction & Contract Verification Report
 
 **Phase Goal:** A documented, reproducible local-width extraction method is specified and then implemented, and is visually validated against all 4 tracks before anything downstream trusts it as ground truth.
-**Verified:** 2026-07-21T18:30:00Z
-**Status:** human_needed
-**Re-verification:** Yes — full re-verification after 4 gap-closure plans (01-09, 01-10, 01-11, 01-12) landed since the 2026-07-20T22:10:00Z VERIFICATION.md (previous status: gaps_found, 5/7)
+**Verified:** 2026-07-22T22:30:00Z
+**Status:** gaps_found
+**Re-verification:** Yes — after gap-closure plan 01-16 (Amendment A8, closed UAT gap G-01-6's two tractable mechanisms), following the 2026-07-22T12:00:00Z VERIFICATION.md (previous status: human_needed, 3/4)
 
 ## Goal Achievement
 
 ### Observable Truths
 
-The four ROADMAP success criteria, merged with the two safety-net truths carried forward from the prior verification's CR-02/CR-03 findings (both bear directly on "reproducible... before anything downstream trusts it").
-
 | # | Truth | Status | Evidence |
 |---:|---|---|---|
-| 1 | The TARGET-01 contract (width definition, threshold rule, smoothing scale, 0.2mm grid, valid-coordinate mask, track-21 gap rule) is written and reviewed before extraction code is trusted | ✓ VERIFIED | Unchanged since prior verification: D-01–D-16 in `01-CONTEXT.md`, plus Amendments A1-A5 (A5 added by 01-11), all written/dated before or alongside the code implementing them. |
-| 2 | Running the extractor on all 4 tracks produces the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21) | ? UNCERTAIN (human) | Live re-run of `scripts/check_targets.py --project_dir .` today: 8=0.7528mm > 10=0.3713mm (PASS), 10=0.3713mm vs 14=0.4765mm (FLAG), 14=0.4765mm > 21=0.1998mm (PASS). Track 10's coverage collapse that made its prior median unrepresentative is fixed (60.5% valid, up from 5.2%), and the 10-vs-14 gap narrowed substantially (0.2509→0.3713 vs 0.4765mm), but the chain still does not fully hold. Two independent, pre-registered, outcome-independent fix cycles have already targeted this defect class (01-06/07/08, then 01-11); the project's own HONEST-OUTCOME GUARD explicitly declines to chase this further with code and instead escalates to a human override-vs-investigate decision via `01-SIGNOFF-REQUEST.md`. Reclassified from FAILED to UNCERTAIN accordingly — see Human Verification #1. |
-| 3 | QA plots overlay extracted width/boundary on raw+detrended maps for all 4 tracks, incl. track 21's gaps, and are visually confirmed sane | ? UNCERTAIN (human) | All 12 QA PNGs regenerated 2026-07-21 and directly inspected during this verification. Track 8 and 21 show continuous, plausible boundary traces (as in the prior verification). Track 10's overlay now shows a real boundary trace across most of the 20-100mm span (a major change from the prior verification's near-total absence), but the trace is visibly noisier/more jagged than tracks 8/21, and its width curve degrades toward near-zero past x≈70mm. `01-SIGNOFF-REQUEST.md` was produced specifically to route this domain judgment to a human; 0/4 checkboxes ticked. Not FAILED (the artifact is no longer structurally broken) and not VERIFIED (visual sanity is an explicit human-only gate) — see Human Verification #2. |
-| 4 | The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds (single shared parameterization) | ✓ VERIFIED | `grep -n "track_id =="` over `src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py` returns nothing; `tests/test_targets.py::test_single_parameterization_has_no_track_conditionals`, `test_track_id_does_not_affect_numeric_output`, and (new) `test_edge_divergence_fix_is_track_independent` all pass. |
-| 5 | `check_targets.py` fails closed (non-zero exit / hard error) when a persisted artifact violates the project's own coverage expectations | ✓ VERIFIED | Prior verification's CR-02 gap is closed: `scripts/check_targets.py:100-104` now `require(valid_fraction >= MIN_VALID_FRACTION, ...)` (0.5), a hard `ValueError`-raising gate, not a `print`. Source inspection + live run confirmed. |
-| 6 | The publish path used to write `processed_data/targets/` cannot be redirected by a pre-existing symlink into a destructive delete outside the intended output tree | ✓ VERIFIED | Prior verification's CR-03 gap is closed: `reject_symlink_path()` (new in `scripts/run_target_extraction.py:62-73`) rejects a symlinked candidate or symlinked in-repo ancestor before any resolve; `publish_staging_dir()` (lines 309-329) re-checks `is_symlink()` immediately before every `rmtree`/`rename`. 4 dedicated regression tests pass, including the specific `targets.previous`-symlink scenario the prior review reproduced as a live exploit. |
+| 1 | The TARGET-01 contract (width definition, threshold rule, smoothing scale, 0.2mm grid, valid-coordinate mask, track-21 gap rule) is written and reviewed before extraction code is trusted | VERIFIED | `.planning/phases/01-target-extraction-contract/01-CONTEXT.md` records D-01 through D-16 plus Amendments A1-A8 (A8 added by plan 01-16, confirmed present via `grep -q "Amendment A8"`). Unchanged in substance from the prior verification pass; the phase's own history shows the contract was locked and reviewed before every extraction/fix cycle. |
+| 2 | Running the extractor on all 4 tracks produces the expected width ordering 400W(8) > 350W(10) > 300W(14) > 200W(21) | PASSED (override) | Live re-run of `.venv/bin/python scripts/check_targets.py --project_dir .` today (exit 0, `ALL CHECKS PASSED`): 8=0.7653mm > 10=0.3940mm (PASS), 10=0.3940mm vs 14=0.7122mm (FLAG), 14=0.7122mm > 21=0.6308mm (PASS). The 10-vs-14 FLAG is an already-accepted known limitation (UAT Test 7, four independent diagnosis cycles); see override entry in frontmatter. Flagged: the gap widened from 0.2404mm to 0.3182mm (+32%) since that decision was recorded, and the sign-off document describing the decision is now stale (see Gap 1). |
+| 3 | QA plots overlay extracted width/boundary on raw+detrended maps for all 4 tracks, incl. track 21's gaps, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps) | FAILED | Plan 01-16 (Amendment A8) measurably improved fragmentation on 3/4 tracks and resolved both crop-edge symptoms UAT Test 8 cited, but NO fresh human visual sign-off has occurred against these regenerated (Amendment A8) figures -- the prior visual review (UAT Test 8) judged Amendment-A7-era images, which have since changed materially (coverage +7/+30/+8/+30 bins per track; fragmentation counts changed on every track). `01-UAT.md`'s own Gaps section still records G-01-6 as `status: failed`, not updated to `resolved`. The sign-off vehicle (`01-SIGNOFF-REQUEST.md`) was not regenerated to reflect Amendment A8 (see Gap 1) -- confirmed by comparing its quoted `run_id` (`99a4e847...`) against the live `processed_data/targets/manifest.json` (`b3f79f20...`). |
+| 4 | The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds (single shared parameterization) | VERIFIED | `grep -n "track_id =="` across `src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py` returns nothing (re-confirmed live). `tests/test_targets.py::test_single_parameterization_has_no_track_conditionals` and `test_track_id_does_not_affect_numeric_output` both PASS in a full local run of all 38 tests in `tests/test_targets.py` (plus 13 in `tests/test_nsf_fmrg_data.py`, 10 in `tests/test_run_target_extraction.py`), executed directly this pass — all green. |
 
-**Score:** 4/6 truths verified (0 present-but-behavior-unverified; 2 routed to human judgment, not counted toward the verified score)
+**Score:** 3/4 truths verified (2 fully VERIFIED, 1 PASSED via documented override); 1 truth FAILED (blocking).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
-|---|---|---|---|
-| `src/targets.py` | Shared extraction implementation incl. bead-mask fix | ✓ VERIFIED | `bead_exclusion_mask()` present and wired; `tests/test_targets.py` — 27/27 PASS. |
-| `src/nsf_fmrg_data.py` | Configurable detrend with `fit_mask` + `max_y_degree` (Amendment A5) | ✓ VERIFIED | `robust_plane_detrend(..., fit_mask=..., max_y_degree=...)` confirmed; `tests/test_nsf_fmrg_data.py` — 12/12 PASS. |
-| `scripts/run_target_extraction.py` | Symlink-safe publish pipeline | ✓ VERIFIED | `reject_symlink_path`, re-checked `is_symlink()` guards present at every destructive op; `tests/test_run_target_extraction.py` — 14/14 PASS. |
-| `scripts/check_targets.py` | Hard coverage-floor gate + structural/provenance checks | ✓ VERIFIED | `MIN_VALID_FRACTION = 0.5` enforced via `require()`; live run exits 0 only because all 4 tracks now clear the floor. |
-| `scripts/diagnose_track10_coverage.py` | Committed, re-runnable coverage diagnostic (01-11) | ✓ EXISTS, ⚠️ diverges from production (see WR-01 below) | Present and runnable; its `production_residual_profile()` omits `max_y_degree=DETREND_MAX_Y_DEGREE`, so it reports track 10 at 5.25% valid while the real pipeline produces 60.5% — a diagnostic-staleness warning, not a phase-goal blocker. |
-| `scripts/diagnose_width_regression.py` | Diagnostic sweep tool (bead-mask axis added 01-09) | ✓ EXISTS, ⚠️ still diverges from production on `max_y_degree` (WR-02) | Bead-mask axis present and correct per WR-03 (prior review); `max_y_degree` axis still missing, so its "production-labeled" sweep row underreports track 10's width by ~48% relative to the live pipeline. |
-| `processed_data/targets/track_{8,10,14,21}_targets.npz` | Regenerated fixed-grid curves under Amendment A5 | ✓ VERIFIED | All 4 pass `check_targets.py`'s full structural/dtype/mask/coverage checks; valid fractions 91.0% / 60.5% / 75.0% / 81.3%. |
-| `processed_data/targets/extraction_params.json` / `manifest.json` | Complete, change-sensitive provenance | ✓ VERIFIED | 16 keys (added `DETREND_MAX_Y_DEGREE`); SHA-256 digest matches; `check_targets.py` cross-checks both live. |
-| `processed_data/targets/qa/*.png` | 12 regenerated QA images | ✓ EXIST, visual sanity ? UNCERTAIN | All 12 present and dated 2026-07-21 (post-Amendment-A5 regeneration); see Truth #3. |
-| `.planning/phases/01-target-extraction-contract/01-CONTEXT.md` | Amendments A1-A5 | ✓ VERIFIED | Amendment A5 present with the pre-registered criterion and evidence. |
-| `.planning/phases/01-target-extraction-contract/01-11-ORDERING-OUTCOME.md` | Honest outcome report | ✓ VERIFIED | Reports the still-unresolved 10-vs-14 FLAG; `git diff --stat -- src/targets.py src/nsf_fmrg_data.py scripts/check_targets.py` empty for the reporting commit; no per-track branch. |
-| `.planning/phases/01-target-extraction-contract/01-SIGNOFF-REQUEST.md` | Human sign-off handoff | ✓ VERIFIED | Exists, names all 12 figures with concrete acceptance questions, presents the override-vs-investigate choice without recommending one, 0/4 checkboxes ticked. |
-| `.planning/REQUIREMENTS.md` | TARGET-02 status corrected | ✓ VERIFIED | Reads "Awaiting human visual sign-off on regenerated QA figures — see `01-SIGNOFF-REQUEST.md`" with a dated correction note, not falsely marked `Complete`. |
+| -------- | ----------- | ------ | ------- |
+| `src/targets.py` | Contract implementation incl. Amendments A1-A8 | VERIFIED | `halfmax_edges` reorders clip-exclusion before merging (`grep -c 'merge_adjacent_runs(non_edge_runs' src/targets.py` = 1) and gates tracked selection with the history-based joint far-AND-small check (Amendment A8). `extraction_params()` unchanged at 19 keys (no new constant introduced, as designed). |
+| `tests/test_targets.py`, `tests/test_nsf_fmrg_data.py`, `tests/test_run_target_extraction.py` | Regression coverage for all amendments incl. A8's 6 new Mechanism A/B regressions | VERIFIED | Full local run this pass: all tests PASS (38/13/10), including `test_halfmax_edges_recovers_leading_edge_swallowed_interior_run`, `test_halfmax_edges_recovers_trailing_edge_swallowed_interior_run`, `test_halfmax_edges_rejects_lone_candidate_far_and_small_versus_tracked_history`, `test_halfmax_edges_accepts_lone_candidate_small_but_close_to_tracked_history`, `test_halfmax_edges_accepts_lone_candidate_far_but_large_versus_tracked_history`, `test_extract_targets_from_arrays_rejects_track8_style_single_candidate_trigger_column`. |
+| `processed_data/targets/track_{8,10,14,21}_targets.npz` | Persisted per-track extraction output | VERIFIED | Regenerated by plan 01-16's Task 2. `manifest.json`'s `run_id` (`b3f79f207cc1431fa238bb153c04419b`), published `2026-07-23T02:43:48Z`, confirmed live this pass matching `check_targets.py`'s live output. |
+| `processed_data/targets/qa/` (12 PNGs) | QA figures (residual/overlay/width × 4 tracks) | VERIFIED (present, current Amendment A8 generation); visual sanity NOT YET REVIEWED | File timestamps (2026-07-22 21:43-21:44) match the Amendment A8 regeneration. No human has yet opened these specific files for sign-off (see Gap 1). |
+| `.planning/phases/01-target-extraction-contract/01-CONTEXT.md` | Amendments A1-A8 documented | VERIFIED | Amendment A8 present, dated, names both mechanisms and the no-new-constant rationale, reaffirms Mechanism C's deferral. |
+| `.planning/phases/01-target-extraction-contract/01-SIGNOFF-REQUEST.md` | Standing human sign-off request, accurate as of the current QA generation | **STUB (stale)** | Still describes Amendment A7's generation (`run_id 99a4e8472f0a4164938363af0725f31b`, 361/202/301/308 valid bins, 0.2404mm 10-vs-14 gap) — confirmed via direct read and diff against the live Amendment A8 numbers (368/232/309/338 valid bins, 0.3182mm gap). This is the same staleness defect class plan 01-15 previously fixed for the A6->A7 transition; it was not caught for the A7->A8 (plan 01-16) transition. |
+| `.planning/REQUIREMENTS.md` | TARGET-02 checkbox agrees with its traceability row | VERIFIED | `- [ ] **TARGET-02**` agrees with its traceability row ("Awaiting human visual sign-off... see `01-SIGNOFF-REQUEST.md`"). A 2026-07-22 correction note (plan 01-16) explains an automated tooling step incorrectly re-ticked this checkbox and it was manually reverted to `[ ]`, consistent with no sign-off having actually occurred. TARGET-01 correctly remains `[x]` / `Complete`. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
-|---|---|---|---|---|
-| `extract_track_targets()` | `bead_exclusion_mask()` | Computed per-track from raw `Z_mm`, passed as `fit_mask` | ✓ WIRED | Unchanged, tests pass. |
-| `robust_plane_detrend()` | least-squares fit | `fit_mask` excludes bead pixels; `max_y_degree` caps cross-track polynomial degree (Amendment A5) | ✓ WIRED | `test_robust_plane_detrend_fit_mask_excludes_bead_from_fit`, `test_detrend_does_not_diverge_at_strip_edge`, `test_polynomial_basis_sizes_are_stable` all pass. |
-| `extraction_params()` | `extraction_params.json` / manifest SHA-256 | JSON dump + digest | ✓ WIRED | Live file inspection matches; digest change-sensitivity test passes. |
-| `run_target_extraction.py::publish_staging_dir` | `processed_data/targets/` | Rename staging → live, rmtree backup, symlink-checked at every step | ✓ WIRED (safety gap closed) | Previously "WIRED WITH SAFETY GAP" (CR-03); now fully guarded — 4 dedicated symlink regression tests pass. |
-| `scripts/check_targets.py` | persisted NPZs | `np.load` + structural asserts + hard coverage-floor gate | ✓ WIRED (gating gap closed) | Previously "WIRED WITH GATING GAP" (CR-02); coverage check is now a `require()`, confirmed to actually block (exercised indirectly: the pre-fix track 10 state would have failed this gate; today's regenerated state passes it honestly). |
-| `find_track_file()` (thermal/height-map read path) | filesystem | `is_file()` match with no `is_symlink()` rejection | ⚠️ WIRED WITH LATENT GAP (WR-03, not a phase blocker) | Read-path symlink rejection exists for SEM tiles (`get_sem_tile_paths`) and the entire write path, but not for `find_track_file` itself — flagged by `01-REVIEW.md` as a real but currently non-misfiring gap given the 4-file real dataset. |
+| ---- | --- | --- | ------ | ------- |
+| `processed_data/targets/manifest.json` + live `check_targets.py` output | `01-SIGNOFF-REQUEST.md` "## Current state" | narrative/numeric accuracy | **NOT_WIRED (stale)** | Live re-derivation this pass (`run_id b3f79f207cc1431fa238bb153c04419b`, 368/232/309/338 valid bins) does NOT match the document's quoted `run_id 99a4e8472f0a4164938363af0725f31b` / 361/202/301/308 figures. Confirmed by direct string comparison. |
+| `01-16-ORDERING-OUTCOME.md`'s honest fragmentation/coverage report | `01-UAT.md`'s G-01-6 gap entry | gap-closure status update | **PARTIAL** | 01-16-ORDERING-OUTCOME.md and 01-16-SUMMARY.md both document the fix and its measured (mixed-but-largely-improved) outcome, but `01-UAT.md`'s own Gaps section still records `G-01-6: status: failed` — not reconciled to `resolved` pending the fresh visual round this gap requires. |
+| `src/targets.py`'s Amendment A8 signature/behavior | `scripts/diagnose_track10_coverage.py`'s `classify_column` reimplementation | mirrored rejection-reason logic | **NOT_WIRED (drifted, pre-existing warning)** | Per `01-REVIEW.md`'s WR-01: the diagnostic script still applies merge-then-clip (the pre-A8 order) and has no history-based gate, so its committed `track10_coverage_diagnosis.csv` reports rejection counts (361/202/301/312-style) that don't match current production `valid_mask` sums (368/232/309/338). Does not affect the shipped extraction pipeline (diagnostic-only), but is a real, unresolved drift. |
+| `.planning/REQUIREMENTS.md` TARGET-02 row | `01-SIGNOFF-REQUEST.md` | flip-on-record-only | WIRED | Document and REQUIREMENTS.md agree TARGET-02 flips to complete only after a recorded `/gsd-verify-work 1` sign-off exists; confirmed the checkbox is still `[ ]`, not prematurely flipped. |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
-|---|---|---|---|
-| Target-contract regressions | `.venv/bin/python tests/test_targets.py` | 27 PASS, 0 FAIL | ✓ PASS |
-| Detrend + loader regressions | `.venv/bin/python tests/test_nsf_fmrg_data.py` | 12 PASS, 0 FAIL | ✓ PASS |
-| Runner safety + symlink regressions | `.venv/bin/python tests/test_run_target_extraction.py` | 14 PASS, 0 FAIL (incl. `data/raw/` integrity PASS on every real-data run) | ✓ PASS |
-| Persisted artifact/provenance/coverage checker | `.venv/bin/python scripts/check_targets.py --project_dir .` | Structural + provenance + coverage-floor checks all pass; ordering FLAG on 10-vs-14 printed as diagnostic, not gated; exit 0 | ✓ PASS (coverage gate now blocking; ordering FLAG intentionally non-blocking per design) |
-| No per-track branching | `grep -n "track_id ==" src/targets.py src/nsf_fmrg_data.py scripts/run_target_extraction.py` | No matches | ✓ PASS |
-| `data/raw/` untouched by any phase-1 code path | `git log --oneline -- data/raw` shows only the original data-tracking commit; runner's own audit prints `PASS` on every run | Unmodified since original commit; runner-internal audit consistently PASS | ✓ PASS (note: `data/raw/` itself IS committed to git via a prior, out-of-phase commit — a Phase 5 SUBMIT-01/02 concern per ROADMAP, not a Phase 1 must-have; flagged for awareness, not scored here) |
-
-### Probe Execution
-
-No probe scripts declared in any Phase 1 plan and no conventional `scripts/*/tests/probe-*.sh` files exist.
+| -------- | ------- | ------ | ------ |
+| `check_targets.py` passes and reports live ordering/coverage numbers | `.venv/bin/python scripts/check_targets.py --project_dir .` | exit 0, `ALL CHECKS PASSED`; 368/232/309/338 valid bins, 0.7653/0.3940/0.7122/0.6308mm medians | PASS |
+| No per-track branching exists in production code | `grep -n "track_id ==" src/targets.py src/nsf_fmrg_data.py scripts/run_target_extraction.py` | no matches | PASS |
+| Full local regression suite passes | `.venv/bin/python tests/test_targets.py`, `tests/test_nsf_fmrg_data.py`, `tests/test_run_target_extraction.py` | 38/13/10 PASS, 0 fail | PASS |
+| `01-SIGNOFF-REQUEST.md` numbers vs. live artifacts | Compared live `manifest.json`/`check_targets.py` output against document's quoted numbers | MISMATCH: run_id, valid-bin counts, medians, 10-vs-14 gap all differ (A7 vs A8) | **FAIL** |
+| No debt markers in production source | `grep -nE "TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER" src/targets.py src/nsf_fmrg_data.py scripts/run_target_extraction.py scripts/check_targets.py` | no matches | PASS |
+| G-01-6 reconciliation | Read `01-UAT.md` Gaps section | `status: failed`, unchanged since Test 8; not updated after plan 01-16 | **FAIL (unreconciled)** |
 
 ### Requirements Coverage
 
-| Requirement | Source Plans | Description | Status | Evidence |
-|---|---|---|---|---|
-| TARGET-01 | 01-01, 01-03, 01-04, 01-05, 01-07, 01-10, 01-11 | Contract specified/documented before extraction code trusted, single shared parameterization | ✓ SATISFIED | `01-CONTEXT.md` (D-01–D-16, A1-A5), `extraction_params.json` (16 keys), no per-track branches; `REQUIREMENTS.md` marks this `[x] Complete`, consistent with this verification. |
-| TARGET-02 | 01-01 through 01-12 | Extractor implements the contract and is visually QA'd against all 4 tracks before being trusted downstream | ? NEEDS HUMAN | Coverage collapse (the structural blocker from the prior verification) is fixed; both remaining criteria (width-ordering acceptance, visual figure sign-off) are explicitly human-only decisions per `01-SIGNOFF-REQUEST.md`. `REQUIREMENTS.md` correctly reflects this as "Awaiting human visual sign-off," not `Complete` — consistent with this verification. |
+| Requirement | Source Plan | Description | Status | Evidence |
+| ----------- | ---------- | ----------- | ------ | -------- |
+| TARGET-01 | 01-01 (+ amendments in 01-04, 01-07, 01-11, 01-13, 01-14, 01-16) | Contract specified before extraction code trusted | SATISFIED | D-01–D-16 + Amendments A1-A8 in `01-CONTEXT.md`; `REQUIREMENTS.md` checkbox `[x]` and traceability row `Complete` agree; single shared parameterization confirmed by test + grep. |
+| TARGET-02 | 01-02, 01-05, 01-06–01-16 | Extractor implements contract, visually QA'd against all 4 tracks | **BLOCKED** | Extraction/coverage mechanically verified (all tests pass, artifacts present and current); however the visual-QA acceptance criterion is not satisfied: the sign-off vehicle is stale (describes a superseded generation) and no human has reviewed the current Amendment A8 figures. `REQUIREMENTS.md`'s checkbox (`[ ]`) and traceability row ("Awaiting human visual sign-off") correctly reflect this unresolved state. |
 
-Every requirement ID declared across all 12 plans (`requirements:` frontmatter) is `TARGET-01` and/or `TARGET-02`; both are present in `REQUIREMENTS.md`. No orphaned requirement IDs for this phase.
+No orphaned requirements found — TARGET-01/TARGET-02 are the only IDs mapped to Phase 1 across all 16 plans' `requirements:` frontmatter and `REQUIREMENTS.md`'s traceability table.
 
-### Prohibitions
+### Anti-Patterns Found
 
-| Prohibition | Tier | Status | Evidence |
-|---|---|---|---|
-| No outcome-driven per-track tuning of extraction constants | judgment | ✓ VERIFIED | `01-11-ORDERING-OUTCOME.md` reports the still-unresolved ordering with `git diff --stat` empty for the reporting commit; `01-11-CRITERION.md` pre-registered the fix-selection tolerance and candidate mechanisms before any source change existed; Candidate A was rejected by a priori measurement (not by its effect on the ordering); no per-track branch found by direct grep. |
-| No writes/deletes/modifications under `data/raw/` | test | ✓ VERIFIED | `snapshot_raw`/`raw_snapshot_diff` audits pass in all 14 runner tests; `data/raw/ integrity PASS` printed on every live run observed during this verification. |
-| Output publication must not permit destructive operations outside the intended output tree | test | ✓ VERIFIED (was UNVERIFIED/FLAGGED in prior verification) | CR-03 is closed: `reject_symlink_path()` + per-step `is_symlink()` re-checks close the exploit `01-REVIEW.md` previously reproduced live; 4 dedicated regression tests pass, including the exact `targets.previous`-symlink scenario. |
+| File | Line | Pattern | Severity | Impact |
+| ---- | ---- | ------- | -------- | ------ |
+| `.planning/phases/01-target-extraction-contract/01-SIGNOFF-REQUEST.md` | 15, 21 | Document describes a superseded artifact generation (Amendment A7) while production has moved to Amendment A8 | 🛑 Blocker | Directly blocks Success Criterion 3 — a human cannot meaningfully grant visual sign-off against numbers that no longer match the live pipeline output. See Gap 1. |
+| `.planning/phases/01-target-extraction-contract/01-UAT.md` | Gaps section, G-01-6 | Gap status not reconciled after gap-closure plan 01-16 completed | Warning | `status: failed` persists even though code-level fixes landed; correct per project design (visual gaps require a fresh human round to close), but leaves the phase's own gap ledger looking unresolved until that round happens. |
+| `scripts/diagnose_track10_coverage.py` | 110-175 (per `01-REVIEW.md` WR-01) | Diagnostic tooling drifted out of sync with production `halfmax_edges` a second time (post-Amendment-A8) | Warning (pre-existing, carried from code review) | Does not affect the shipped extraction pipeline; affects only a diagnostic script's own committed CSV output. |
+| `.planning/STATE.md` | 8-11 | Shows "Plan: 2 of 16" / "Status: Ready to execute", stale relative to plan 16 having completed | Info | Tracking/dashboard drift, not a pipeline defect; does not affect TARGET-01/02 correctness. |
 
-### Anti-Patterns and Review Findings
+No debt markers (`TBD`/`FIXME`/`XXX`) or unreferenced `TODO`/`HACK`/`PLACEHOLDER` found in `src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py`, or `scripts/check_targets.py`.
 
-No `TBD`, `FIXME`, `XXX`, `TODO`, `HACK`, or placeholder-language markers found in any phase source/script file (`src/targets.py`, `src/nsf_fmrg_data.py`, `scripts/run_target_extraction.py`, `scripts/check_targets.py`, `scripts/diagnose_width_regression.py`, `scripts/diagnose_track10_coverage.py`).
+### Human Verification Required
 
-A fresh, independent code review (`01-REVIEW.md`, 2026-07-21T17:19:38Z) re-verified the three prior CRITICALs as genuinely fixed against real data and real pipeline execution (not just re-cited), and surfaced 6 new WARNINGs + 2 INFO items — none rise to blocker severity per the review's own classification, since none produce wrong targets in the shipped production pipeline:
+Once Gap 1 (regenerating `01-SIGNOFF-REQUEST.md` against the live Amendment A8 run) is closed, a human reviewer still needs to:
 
-| Finding | Severity | Disposition |
-|---|---|---|
-| WR-01: `diagnose_track10_coverage.py`'s "production" path omits `DETREND_MAX_Y_DEGREE`, reports 10x-worse numbers than real production | ⚠️ Warning | Diagnostic-tooling staleness; does not affect the shipped extraction pipeline. |
-| WR-02: `diagnose_width_regression.py`'s sweep still never applies `DETREND_MAX_Y_DEGREE` | ⚠️ Warning | Same class as WR-01; diagnostic tool drift, not a production defect. |
-| WR-03: `find_track_file` (thermal/height-map read path) has no symlink rejection, unlike every other data-touching path | ⚠️ Warning | Real latent gap, inconsistent with the codebase's own established threat model, but does not currently misfire against the 4-file real dataset. |
-| WR-04: `load_wyko_asc` has no exact-filename guard of its own; silently defaults a missing `pixel_size_mm` header | ⚠️ Warning | Guard exists one layer up in `extract_track_targets`; gap only affects direct-caller diagnostic scripts. |
-| WR-05: `robust_plane_detrend`'s `order`/`max_y_degree` validation runs after the degenerate-data early return | ⚠️ Warning | Production call sites always pass hardcoded, correct values; only affects programmatically-swept `order` values in diagnostics. |
-| WR-06: `bin_profile`'s `np.nanmedian` over all-NaN slices emits an uncontrolled `RuntimeWarning` on every real run | ⚠️ Warning | Cosmetic/log-hygiene issue; behavior is otherwise correctly handled downstream. |
-| IN-01/IN-02 | ℹ️ Info | Unused import; redundant no-op path-resolution call. |
+### 1. Visual sign-off on the 12 regenerated (Amendment A8) QA figures
 
-None of these findings block the phase goal as scored above; they are legitimate follow-up items (naturally suited to a Phase 2 planning note or a small standalone cleanup) but do not gate Phase 1 completion.
+**Test:** Open all 12 figures under `processed_data/targets/qa/` (regenerated 2026-07-22 21:43-21:44, run_id `b3f79f207cc1431fa238bb153c04419b`) — residual maps, boundary overlays, width curves for tracks 8/10/14/21 — focusing on: track 8's previously-cited excursion regions (~24-27, 48-55, 81-86, 97-100mm); track 10's overall fragmentation and its right crop-edge band (68 contiguous runs, +1 vs A7); track 21's right crop-edge terminal region (now 0.740→0.877→0.713→0.650→0.403→0.405mm, milder taper vs the prior near-zero collapse).
+**Expected:** A recorded yes/no per figure-category via `/gsd-verify-work 1`, closing G-01-6 for the current Amendment A8 generation (or, if issues remain, a new gap recording exactly what's still wrong).
+**Why human:** Boundary-overlay "sanity" (no unacceptable sawtooth/jitter) is an explicit domain judgment call this phase's own design defers to a human reviewer — mechanical fragmentation/jump-statistic counts (already computed in `01-16-ORDERING-OUTCOME.md`) inform but do not substitute for this judgment.
 
-## Human Verification Required
+### 2. Reaffirm (not reopen) the 10-vs-14 width-ordering FLAG acceptance given the widened gap
 
-### 1. Width-ordering override vs. further investigation (10-vs-14 FLAG)
+**Test:** Confirm that UAT Test 7's acceptance of the 10-vs-14 FLAG as a documented known limitation still stands now that the gap has widened from 0.2404mm to 0.3182mm (+32%) under Amendment A8, and that the regenerated `01-SIGNOFF-REQUEST.md` states this current number rather than the stale 0.2404mm figure.
+**Expected:** A brief recorded confirmation (not a new investigation cycle) that the already-accepted rationale still applies at the new magnitude, carried into `ROADMAP.md`/`REQUIREMENTS.md` as a caveat before Phase 2 begins.
+**Why human:** This phase's own HONEST-OUTCOME GUARD reserves this "accept vs. investigate further" call for a human, and a materially widened gap is not something a mechanical override-carry-forward should silently absorb without at least a brief reaffirmation.
 
-**Test:** Review `01-SIGNOFF-REQUEST.md`'s "Width-ordering override vs. further investigation" section. Choose exactly one: (a) accept the 10-vs-14 FLAG as a documented, known limitation (track 10's median width, from its now-representative 242/400 valid positions, remains below track 14's) and record the rationale, or (b) commission a new gap-closure plan to investigate the 10-vs-14 relationship further.
+### Gaps Summary
 
-**Expected:** A recorded decision, captured via `/gsd-verify-work` run against this phase (not by editing `01-SIGNOFF-REQUEST.md` directly, per that document's own instructions).
+One blocking gap: **`01-SIGNOFF-REQUEST.md` is stale.** It still describes Amendment A7's artifact generation (run_id `99a4e8472f0a4164938363af0725f31b`; 361/202/301/308 valid bins; 0.2404mm 10-vs-14 gap) while the live production artifacts are Amendment A8 (run_id `b3f79f207cc1431fa238bb153c04419b`, regenerated by gap-closure plan 01-16; 368/232/309/338 valid bins; 0.3182mm gap). This is precisely the staleness defect class the project already found and fixed once before (plan 01-15, for the A6→A7 transition) — it recurred for the A7→A8 transition and was not caught before this verification pass.
 
-**Why human:** This is an explicit scientific/product judgment call the phase's own HONEST-OUTCOME GUARD defers to a human. Two independent, pre-registered, outcome-independent diagnostic/fix cycles have already been run against this exact defect class (01-06→01-08, then 01-11); a third automated attempt without new evidence would risk becoming outcome-driven tuning, which the phase has explicitly and repeatedly refused to do.
+Because the sign-off document is the vehicle this project uses to request and record human visual approval, its staleness means Success Criterion 3 ("QA plots ... visually confirmed sane") cannot yet be considered satisfied even though the underlying code fix (plan 01-16, Amendment A8) is real, tested, and measurably improves fragmentation on 3 of 4 tracks. `01-UAT.md`'s own gap ledger agrees: G-01-6 is still recorded as `status: failed`, not `resolved`.
 
-### 2. Visual sign-off on all 12 regenerated QA figures
+Success Criteria 1 and 4 are fully VERIFIED (contract documented and reviewed; single shared parameterization confirmed by code inspection and passing tests). Success Criterion 2 (width ordering) is PASSED via a documented, previously-recorded human override (UAT Test 7) — not re-litigated here per the project's own HONEST-OUTCOME GUARD — but flagged because the sign-off document describing that decision is part of the same staleness gap.
 
-**Test:** Open each of `processed_data/targets/qa/track_{8,10,14,21}_{residual_map,overlay,width}.png` at full resolution and answer the three per-figure-class questions plus the constants-confirmation question in `01-SIGNOFF-REQUEST.md`.
-
-**Expected:** Residual structure is scientifically acceptable process/substrate variation on all 4 tracks (no coherent track-wide bow, no manufactured edge feature); boundary overlays are continuous and physically plausible with explicit gray-shaded invalid regions, including track 10; crop-edge behavior is physically plausible and track 10's prior terminal V-spike is confirmed gone; the four locked constants are confirmed fixed independently of the ordering outcome.
-
-**Why human:** This verification's own inspection of `track_10_overlay.png`/`track_10_width.png` confirms a real, continuous boundary trace now exists across most of the 20-100mm span (a major, independently-visible improvement over the prior verification's near-total absence of trace) — but the trace is visibly noisier than tracks 8/21, and the width curve trails toward near-zero past x≈70mm. Whether this residual noise level is within acceptable "no sawtooth/high-frequency jitter" bounds is a domain judgment call this verifier cannot certify programmatically; it is exactly the question `01-SIGNOFF-REQUEST.md` was built to route to a human.
-
-## Gaps Summary
-
-This re-verification finds that the four gap-closure plans (01-09 through 01-12) genuinely closed the two prior structural BLOCKERs (CR-02: `check_targets.py` no longer silently passes catastrophic coverage loss; CR-03: the publish path is no longer symlink-exploitable) and resolved the underlying defect that made track 10's target artifact structurally unusable (its valid coverage rose from 5.2% to 60.5% via a uniform, pre-registered, outcome-independent fix). All 53 regression tests pass; no debt markers or blocker-severity anti-patterns were found in phase source files; both requirement IDs (TARGET-01, TARGET-02) are accounted for with no orphans; `REQUIREMENTS.md`'s prior false "Complete" marking on TARGET-02 has been correctly walked back.
-
-What remains is not a code defect but two linked human decisions, both routed through the same artifact (`01-SIGNOFF-REQUEST.md`) and the same action (`/gsd-verify-work` against Phase 1): (1) whether to accept the residual 10-vs-14 width-ordering FLAG as a documented limitation or commission further investigation, and (2) visual sign-off on the 12 regenerated QA figures, most notably track 10's now-present-but-still-somewhat-noisy boundary trace. Per this phase's own design (an explicit HONEST-OUTCOME GUARD that refuses to keep tuning code in response to an outcome it has already investigated twice), status is `human_needed` rather than `gaps_found` — there is no further mechanical gap-closure step available; the phase awaits a human decision, not more code.
+**Recommended next step:** a small gap-closure plan (regenerate `01-SIGNOFF-REQUEST.md` against the live Amendment A8 `check_targets.py`/`manifest.json` output, following plan 01-15's exact precedent) followed by one fresh `/gsd-verify-work 1` round to grant or withhold visual sign-off on the current 12 QA figures and reaffirm the widened 10-vs-14 FLAG acceptance.
 
 ---
 
-_Verified: 2026-07-21T18:30:00Z_
+_Verified: 2026-07-22T22:30:00Z_
 _Verifier: Claude (gsd-verifier)_
