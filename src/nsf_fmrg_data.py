@@ -128,7 +128,12 @@ def extract_final_thermal_frames(thermal_dir, track_id):
     if on_stop is None:
         raise ValueError(f'No laser-on interval detected for track {track_id} in {path}.')
     stop_idx = int(on_stop)
-    start_idx = max(0, stop_idx - EXTRACTED_THERMAL_FRAMES)
+    if stop_idx < EXTRACTED_THERMAL_FRAMES:
+        raise ValueError(
+            f'Laser-on interval for track {track_id} ends at frame {stop_idx}, '
+            f'fewer than the required {EXTRACTED_THERMAL_FRAMES} frames.'
+        )
+    start_idx = stop_idx - EXTRACTED_THERMAL_FRAMES
     segment = frames[start_idx:stop_idx]
     indices = np.arange(start_idx, stop_idx)
     x_mm_center = COMMON_X_END_MM - ((stop_idx - indices) - 0.5) * THERMAL_MM_PER_FRAME
