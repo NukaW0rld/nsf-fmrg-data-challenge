@@ -1,6 +1,6 @@
 ---
 phase: 01-target-extraction-contract
-reviewed: 2026-07-22T00:00:00Z
+reviewed: 2026-07-23T00:00:00Z
 depth: standard
 files_reviewed: 29
 files_reviewed_list:
@@ -35,55 +35,131 @@ files_reviewed_list:
   - tests/test_targets.py
 findings:
   critical: 0
-  warning: 1
-  info: 4
-  total: 5
+  warning: 2
+  info: 5
+  total: 7
 status: issues_found
 ---
 
 # Phase 01: Code Review Report
 
-**Reviewed:** 2026-07-22T00:00:00Z
+**Reviewed:** 2026-07-23T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 29
 **Status:** issues_found
 
 ## Summary
 
-This pass focuses on plan 01-16's change to `src/targets.py` (Amendment A8): `halfmax_edges` now applies the boundary-clip-exclusion test to each raw above-threshold run *before* `merge_adjacent_runs` (Mechanism A fix), and gains a history-based joint far-AND-small plausibility gate (`_is_implausible_versus_history`) that rejects a lone same-column-plausible tracked candidate only when it is both farther from `previous_center` than `previous_length_mm` and smaller than `MIN_TRACKED_LENGTH_RATIO * previous_length_mm` (Mechanism B fix). `extract_targets_from_arrays` now threads `previous_length_mm` alongside `previous_center`, resetting both together after a long invalid-column gap.
+This is a re-review of the target-extraction contract deliverable against its current state
+(latest commit `3f87937`, which comment-only disclosed the prior review's WR-01 finding). I
+re-verified the whole surface rather than trusting the prior pass: `src/targets.py` (extraction
+pipeline: binning, half-max boundary tracking with continuity/history gating, run merging, bead
+masking, Savitzky-Golay-style smoothing, provenance), the `src/nsf_fmrg_data.py` diff (fail-fast
+validation additions, and the centered/degree-capped polynomial `robust_plane_detrend` basis),
+`scripts/run_target_extraction.py`'s atomic-publish/symlink/raw-integrity pipeline,
+`scripts/check_targets.py`'s persisted-artifact contract checks, all three `scripts/diagnose_*`
+investigation tools, and the full test suite.
 
-I traced both mechanisms line-by-line against the pre-change diff (`git diff a51c57b^ fbc22af -- src/targets.py`) and verified the following invariants hold: (1) because `non_edge_runs` is filtered from `raw_runs` before `merge_adjacent_runs` runs, a merged candidate's `start`/`stop` are always drawn from an originally non-edge-touching run, so `start >= 1` and `stop <= len(prof) - 1` always hold — the downstream `prof[start - 1]` / `prof[stop]` interpolation lookups can never index out of bounds or silently re-admit a boundary-touching span; (2) the same-column `MIN_TRACKED_LENGTH_RATIO` filter always contains at least the max-length candidate, so `plausible` is never empty before the history gate runs; (3) the history gate's `and` (not `or`) means a candidate close to `previous_center` is never rejected on size alone and a candidate as large as recent history is never rejected on distance alone, matching the accompanying comments. All 38 tests in `tests/test_targets.py`, 13 in `tests/test_nsf_fmrg_data.py`, and 10 in `tests/test_run_target_extraction.py` pass locally (ran under `.venv`), including the six new/changed Mechanism A/B regression tests (`test_halfmax_edges_recovers_leading_edge_swallowed_interior_run`, `test_halfmax_edges_recovers_trailing_edge_swallowed_interior_run`, `test_halfmax_edges_rejects_lone_candidate_far_and_small_versus_tracked_history`, `test_halfmax_edges_accepts_lone_candidate_small_but_close_to_tracked_history`, `test_halfmax_edges_accepts_lone_candidate_far_but_large_versus_tracked_history`, `test_extract_targets_from_arrays_rejects_track8_style_single_candidate_trigger_column`). I did not find a correctness defect in `halfmax_edges` or `extract_targets_from_arrays` itself.
+All 68 tests pass (`tests/test_nsf_fmrg_data.py` 13/13, `tests/test_targets.py` 38/38,
+`tests/test_run_target_extraction.py` 10/10, run under `.venv`). Re-running
+`scripts/check_targets.py` against the committed `processed_data/targets/` artifacts passes
+end-to-end, including the documented `10 vs 14` width-ordering `FLAG` (explicitly accepted by the
+project and not re-litigated here). The four `.npz` files have the expected keys/dtypes/shapes,
+`manifest.json`'s digest matches `extraction_params.json`, and the 12 QA PNGs are well-formed
+non-empty images. The symlink/path-traversal hardening in `run_target_extraction.py` (CR-02/CR-03)
+is exercised by a thorough dedicated test file and I found no bypass. The centered/capped
+polynomial basis in `robust_plane_detrend` is internally consistent (fit and reconstruction share
+the same exponent list and center point), and its validation-before-degenerate-fallback ordering
+matches the documented WR-02 history.
 
-The 10-vs-14 width-ordering FLAG documented in `01-16-ORDERING-OUTCOME.md` is a known, previously-accepted limitation (Mechanism C, the deferred DP/Viterbi joint tracker) and is not re-litigated here.
+**The prior review's WR-01** (`diagnose_track10_coverage.py`'s `classify_column` drifting out of
+sync with `targets.halfmax_edges` after the Amendment A8 Mechanism A/B fix) **is now resolved** —
+commit `3f87937` added an explicit, accurate disclosure comment (`scripts/diagnose_track10_coverage.py:110-125`)
+stating the diagnostic and its committed CSV are a stale historical baseline that must never be
+read as live production characterization. I verified the comment's factual claims against the
+current `src/targets.py:212-261` and they are correct.
 
-What I did find is a **regression of a previously-fixed issue**: `scripts/diagnose_track10_coverage.py`'s `classify_column` was explicitly synced with `targets.halfmax_edges` earlier in this same day's work (commit `44ac9dc`, "WR-01 sync..."), but plan 01-16's subsequent change to `halfmax_edges` (commit `fbc22af`, ~3 hours later) was never propagated to this diagnostic, so it has drifted out of sync again — and the committed `track10_coverage_diagnosis.csv` was last regenerated between those two commits, so it now reports rejection-reason counts from neither the current production algorithm nor even the diagnostic script's own (already-stale) reimplementation of it as currently loaded. Three carried-over `Info`-level findings from the prior review pass (unused `import json`, silent ambiguous-match resolution in `find_track_file`, silent hardcoded-default `pixel_size_mm` fallback in `load_wyko_asc`) remain unaddressed in the current file state and are restated below for completeness.
+Three of the prior review's Info-level findings remain unaddressed in the current file state and
+are restated below (IN-01, IN-02, IN-03 below correspond to the prior pass's IN-02, IN-03, IN-01).
+I additionally found one new Warning (thermal frame-count validation gap, not previously reviewed)
+and elevated the prior pass's IN-04 (`pixel_size_mm` silent fallback) to Warning on independent
+review, since it is reachable, unguarded, silent-wrong-output territory in three shipped scripts,
+not just a theoretical future caller. One new Info item is added for an inconsistency in symlink
+defense depth.
 
 ## Warnings
 
-### WR-01: `diagnose_track10_coverage.py`'s `classify_column` has drifted out of sync with `targets.halfmax_edges` again, after plan 01-16's Mechanism A/B fix
+### WR-01: `load_wyko_asc`'s silent `pixel_size_mm` fallback is unguarded in every direct caller except the one that persists targets
 
-**File:** `scripts/diagnose_track10_coverage.py:110-175`
+**File:** `src/nsf_fmrg_data.py:184` (fallback); guarded only at `src/targets.py:409-410`
+**Issue:** `load_wyko_asc` computes physical coordinate arrays (`x_local_mm`, `x_actual_mm`,
+`y_mm`) using `pixel = float(header.get('pixel_size_mm', 0.003982))`. If a `Heightmap_*.ASC`
+header is missing the `pixel_size_mm` field, this silently substitutes a hardcoded legacy default
+instead of raising, and returns an otherwise normal-looking result dict — the function never
+signals that a fallback was used. The *only* guard against this anywhere in the codebase is in
+`targets.extract_track_targets` (`if 'pixel_size_mm' not in data['header']: raise
+ValueError(...)`), which runs after `load_wyko_asc` has already done the (potentially wrong-scale)
+coordinate math, and which only protects the single call site that ultimately writes
+`processed_data/targets/*.npz`. `scripts/diagnose_track10_coverage.py`,
+`scripts/diagnose_track10_tail_collapse.py`, and `scripts/diagnose_width_regression.py` all call
+`nsf_fmrg_data.load_wyko_asc(height_dir, track_id)` directly and never check for the field's
+presence. If a future or malformed `Heightmap_*.ASC` omits `pixel_size_mm`, these three
+diagnostics would silently compute every downstream mm-scaled quantity (widths, shape-gap
+departures, design-matrix conditioning) at the wrong physical scale with no error — the exact
+class of silent-wrong-number failure the rest of this phase's hardening work (the `x_size`/`y_size`
+guard two lines above this one, WR-02/WR-03 on `robust_plane_detrend`, WR-04 on the laser-on
+interval) was specifically written to eliminate.
+**Fix:** Move the presence check into `load_wyko_asc` itself, next to the existing
+`x_size`/`y_size` guard:
+```python
+if 'x_size' not in header or 'y_size' not in header:
+    raise ValueError(f'{path} header is missing X Size/Y Size fields.')
+if 'pixel_size_mm' not in header:
+    raise ValueError(f'{path} header is missing pixel_size_mm.')
+x_size = int(header['x_size'])
+y_size = int(header['y_size'])
+pixel = float(header['pixel_size_mm'])
+```
+This also makes `targets.extract_track_targets`'s own downstream check (`src/targets.py:409-410`)
+redundant but harmless, or lets it be removed.
 
-**Issue:** `classify_column`'s own docstring-comment states: "Mirrors targets.halfmax_edges' rejection branches so this diagnostic can attribute a reason to each bin; must be kept in step with that function." It was synced once (commit `44ac9dc`, same day, `18:56:59`) to match the Amendment A7 (`01-14`) behavior — but plan 01-16 (commit `fbc22af`, `21:43:42`, ~3 hours later) changed `targets.halfmax_edges` again and this diagnostic was not updated to match:
+### WR-02: `extract_final_thermal_frames` does not validate the extracted segment actually has `EXTRACTED_THERMAL_FRAMES` (400) frames
 
-- It still does `merged_runs = merge_adjacent_runs(all_true_runs(above), MAX_RUN_MERGE_GAP_PIXELS)` and *then* filters `start != 0 and stop != len(prof)` on the merged result (`diagnose_track10_coverage.py:127-132`). Production `halfmax_edges` now filters non-edge-touching raw runs *before* merging (`src/targets.py:212-217`, Amendment A8 / Mechanism A). These two orderings produce different candidate sets whenever an edge-touching raw run sits within `MAX_RUN_MERGE_GAP_PIXELS` of an otherwise-valid interior run — exactly the scenario Mechanism A was written to fix.
-- It has no equivalent of the new history-based `_is_implausible_versus_history` gate (`src/targets.py:247-261`, Mechanism B): when `previous_center is not None`, `classify_column` applies only the same-column `MIN_TRACKED_LENGTH_RATIO` filter (`diagnose_track10_coverage.py:141-145`) and picks the nearest candidate with no far-AND-small history check at all.
-
-This is measurable, not hypothetical: the committed `processed_data/diagnostics/track10_coverage_diagnosis.csv` (last regenerated at commit `cba53f2`, `18:58:53`, between the two `halfmax_edges` changes) reports `rejection_ok` = 361/202/301/312 for tracks 8/10/14/21. The current production artifacts (`processed_data/targets/track_{8,10,14,21}_targets.npz`, regenerated after `fbc22af` at `21:43-21:44`) have `valid_mask.sum()` = 368/232/309/338 for the same four tracks — a mismatch on every single track (verified directly: `np.load(...)['valid_mask'].mean()` against the CSV's `rejection_ok` column). Anyone consulting this diagnostic — including a future re-run of the exact same episode this file exists to characterize — will draw conclusions about track 10's rejection-reason breakdown that do not match what the shipped pipeline currently does or produces.
-
-**Fix:** Either (a) update `classify_column` to filter non-edge raw runs before calling `merge_adjacent_runs`, and add the same `previous_length_mm`-based history gate `targets.halfmax_edges` now uses (ideally by importing and calling `targets.halfmax_edges` directly instead of hand-duplicating its candidate-selection logic, which is what created this drift twice in one day), and regenerate `track10_coverage_diagnosis.csv`; or (b) if this diagnostic is intentionally frozen as a point-in-time snapshot, add an explicit "historical baseline as of commit X — does not reflect current `halfmax_edges`" disclaimer (matching the pattern `scripts/diagnose_width_regression.py` already uses for its `bead_mask=False` rows) so nobody mistakes it for a live characterization of production behavior.
+**File:** `src/nsf_fmrg_data.py:118-141`, specifically line 131
+**Issue:** `start_idx = max(0, stop_idx - EXTRACTED_THERMAL_FRAMES)` clamps to 0 without checking
+`stop_idx >= EXTRACTED_THERMAL_FRAMES`. If a thermal `.mat` file's detected laser-on interval ends
+before frame 400 (`on_stop < 400`), the returned `segment`/`x_mm_center` arrays are silently
+shorter than 400 samples instead of raising. Every consumer in this codebase assumes a fixed
+400-element correspondence between thermal frames and `targets.target_grid()`
+(`tests/test_targets.py::test_target_grid_matches_thermal_centers` derives its expected grid
+directly from `nsf_fmrg_data.EXTRACTED_THERMAL_FRAMES`, and the module comment added in this same
+diff at `src/nsf_fmrg_data.py:13-16` explicitly documents that this constant's value is load-bearing
+for that correspondence). This function received three new fail-fast guards in this same diff
+(missing file, unresolved laser-on interval, filename mismatch) but the short-segment case was not
+covered, and no test exercises `on_stop < EXTRACTED_THERMAL_FRAMES`. Not exercised by this phase's
+shipped pipeline (target extraction only touches height maps), so it has zero current blast
+radius, but it is part of the exact same hardening pass and will be load-bearing the moment a
+later phase aligns thermal frames against the target grid.
+**Fix:**
+```python
+if on_stop is None:
+    raise ValueError(f'No laser-on interval detected for track {track_id} in {path}.')
+stop_idx = int(on_stop)
+if stop_idx < EXTRACTED_THERMAL_FRAMES:
+    raise ValueError(
+        f'Laser-on interval for track {track_id} ends at frame {stop_idx}, '
+        f'fewer than the required {EXTRACTED_THERMAL_FRAMES} frames.'
+    )
+start_idx = stop_idx - EXTRACTED_THERMAL_FRAMES
+```
 
 ## Info
 
-### IN-01: `diagnose_width_regression.py`'s continuity sweep silently disables the new Mechanism-B history gate
-
-**File:** `scripts/diagnose_track10_coverage.py` is not the only diagnostic affected by the Amendment A8 signature change; `scripts/diagnose_width_regression.py:67` calls `halfmax_edges(prof, y_mm, previous_center=query_center)` without passing `previous_length_mm`. Unlike `diagnose_track10_coverage.py`, this script calls the real `targets.halfmax_edges` (not a reimplementation), so it can never silently diverge in a way that produces *wrong* output — but every "continuity=True" row in the sweep now measures a variant of production tracking with Mechanism B permanently switched off (the function's default `previous_length_mm=None` disables the history gate entirely), which is a materially different tracking behavior than what `extract_targets_from_arrays` actually runs today.
-**Fix:** Thread `previous_length_mm` through `extract_swept` the same way `extract_targets_from_arrays` does, or add a one-line comment noting that this sweep's "continuity" rows intentionally exclude the Mechanism B history gate, so a future reader doesn't assume this sweep characterizes the exact current production tracking behavior.
-
-### IN-02: Unused `import json` in `src/nsf_fmrg_data.py`
+### IN-01: Unused `import json` in `src/nsf_fmrg_data.py`
 
 **File:** `src/nsf_fmrg_data.py:3`
-**Issue:** `json` is imported at module scope but never referenced anywhere in the file (still true in the current file state; carried over from the prior review pass, unaddressed).
+**Issue:** `json` is imported at module scope but never referenced anywhere in the file. Carried
+over from the prior review pass; still unaddressed in the current file state.
 **Fix:**
 ```python
 from pathlib import Path
@@ -93,10 +169,16 @@ from scipy.io import loadmat
 from PIL import Image, ImageOps
 ```
 
-### IN-03: `find_track_file` silently resolves ambiguous multi-match cases instead of erroring
+### IN-02: `find_track_file` silently resolves ambiguous multi-match cases instead of erroring
 
 **File:** `src/nsf_fmrg_data.py:25-35`
-**Issue:** `find_track_file` collects every file whose suffix and anchored track-id regex match, sorts by `natural_key`, and silently returns `matches[0]`. If the raw tree ever contains more than one file resolving to the same track (e.g. a stray backup/duplicate), the function picks one with no signal that a choice was made, and downstream basename checks (`extract_final_thermal_frames`, `load_wyko_asc`) would not catch a duplicate sharing the exact expected basename. Still present in the current file state; carried over from the prior review pass, unaddressed.
+**Issue:** `find_track_file` collects every file whose suffix and anchored track-id regex match,
+sorts by `natural_key`, and silently returns `matches[0]`. If the raw tree ever contains more than
+one file resolving to the same track (e.g. a stray backup/duplicate), the function picks one with
+no signal that a choice was made. Downstream basename checks (`extract_final_thermal_frames`,
+`load_wyko_asc`'s callers) only catch the case where the *chosen* match has the wrong basename,
+not the case where a duplicate silently shadows the correct file. Carried over from the prior
+review pass; still unaddressed.
 **Fix:**
 ```python
 matches = sorted(matches, key=natural_key)
@@ -105,19 +187,58 @@ if len(matches) > 1:
 return matches[0] if matches else None
 ```
 
-### IN-04: `load_wyko_asc` silently falls back to a hardcoded default pixel size before the missing-header case is caught
+### IN-03: `diagnose_width_regression.py`'s continuity sweep silently omits Amendment A8's Mechanism B history gate, and — unlike its sibling — was never given a disclosure comment
 
-**File:** `src/nsf_fmrg_data.py:175-221` (default at line 184); guarded downstream at `src/targets.py:409-410`
-**Issue:** `load_wyko_asc` computes `pixel = float(header.get('pixel_size_mm', 0.003982))` and uses it to build the entire returned coordinate geometry before any check that `pixel_size_mm` was actually present in the header. `targets.extract_track_targets` guards this after the fact (`if 'pixel_size_mm' not in data['header']: raise ValueError(...)`), so the production pipeline is safe, but any other direct caller of `load_wyko_asc` (a notebook, a future script) silently gets a plausible-looking but wrongly-scaled height map with no error. Still present in the current file state; carried over from the prior review pass, unaddressed.
-**Fix:**
-```python
-if 'pixel_size_mm' not in header:
-    raise ValueError(f'{path} header is missing pixel_size_mm.')
-pixel = float(header['pixel_size_mm'])
-```
+**File:** `scripts/diagnose_width_regression.py:46-78`, specifically line 67
+**Issue:** `extract_swept` calls `targets.halfmax_edges(prof, y_mm, previous_center=query_center)`
+without `previous_length_mm`, so it always defaults to `previous_length_mm=None`, disabling the
+Mechanism B far-AND-small history gate that `targets.extract_targets_from_arrays` (the real
+production path) applies via `previous_length_mm` (`src/targets.py:377-388`). This script calls
+the genuine `targets.halfmax_edges` (not a reimplementation, so it can never diverge into *wrong*
+output the way `diagnose_track10_coverage.py`'s hand-rolled `classify_column` did), but every
+`continuity=True` row in its sweep still measures a materially different tracking variant than
+what `src/targets.py` runs today. Notably, the sibling diagnostic
+(`scripts/diagnose_track10_coverage.py`) had the *same* category of staleness and was just given
+an explicit disclosure comment in the most recent commit (`3f87937`); this file was not similarly
+updated, so the inconsistency between the two diagnostics' documentation is now more visible, not
+less. `processed_data/diagnostics/width_regression_sweep.csv` (this script's output) is also
+currently untracked in git, unlike its two sibling diagnostic CSVs which are committed.
+**Fix:** Thread `previous_length_mm` through `extract_swept` (or call
+`targets.extract_targets_from_arrays` directly for the `continuity=True` rows), or at minimum add
+a one-line comment stating the sweep's continuity rows exclude the Mechanism B history gate — then
+either commit `width_regression_sweep.csv` alongside its siblings or add it to `.gitignore`.
+
+### IN-04: `get_sem_tile_paths`'s symlink defense is shallower than the rest of the codebase's path hardening
+
+**File:** `src/nsf_fmrg_data.py:144-152`
+**Issue:** This phase hardened `get_sem_tile_paths` with `if root.is_symlink() or
+root.parent.is_symlink(): raise ValueError(...)`, checking only the SEM tile directory and its
+immediate parent. `scripts/run_target_extraction.py`'s `reject_symlink_path` (used for every
+output path in the target-extraction pipeline) instead walks the entire ancestor chain up to the
+project root. A symlink planted higher up the tree (e.g. at the `sem_dir` argument itself, or an
+ancestor above `SEM_<id>/`) would not be caught by `get_sem_tile_paths`. Not currently exploitable
+within this phase's actual pipeline — `get_sem_tile_paths` isn't called anywhere in
+`scripts/run_target_extraction.py` or `scripts/check_targets.py` — but it is an inconsistent depth
+of protection for nominally the same "don't silently read through a symlinked data directory"
+threat model this phase otherwise took seriously (CR-03).
+**Fix:** If/when a later phase wires SEM loading into a similarly hardened pipeline, reuse
+`reject_symlink_path`'s full-ancestor-walk pattern rather than the current two-level check.
+
+### IN-05: `resolve_raw_dir` is validated twice on every invocation
+
+**File:** `scripts/run_target_extraction.py:35-49`
+**Issue:** `resolve_repository_root` calls `resolve_raw_dir(candidate)` at line 48 purely for its
+validating side effect and discards the result; every caller (`run_pipeline` at line 339,
+`scripts/check_targets.py:120`, and all three `diagnose_*` scripts) then calls
+`resolve_raw_dir(project_root)` again immediately afterward. Harmless (idempotent, cheap — one
+`Path.resolve(strict=True)` plus one `is_dir()` check) but is duplicated validation work with no
+comment explaining the intentional redundancy.
+**Fix:** Either have `resolve_repository_root` return `(project_root, raw_dir)` so callers reuse
+the already-validated `raw_dir`, or drop the internal call and document that raw-dir validation is
+the caller's responsibility.
 
 ---
 
-_Reviewed: 2026-07-22T00:00:00Z_
+_Reviewed: 2026-07-23T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
