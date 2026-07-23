@@ -15,6 +15,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
 from targets import (
+    DETREND_MAX_XY_DEGREE,
     DETREND_MAX_Y_DEGREE,
     DETREND_POLY_ORDER,
     TRACK_IDS,
@@ -54,12 +55,14 @@ def measure_track(height_dir, track_id):
     x_actual_mm = data['x_actual_mm']
     y_mm = data['y_mm']
 
-    # The exact CURRENT production path (Amendment A5, no new parameter,
-    # since none exists yet): observe only the currently-shipped fit.
+    # The exact CURRENT production path (Amendment A6: order=DETREND_POLY_ORDER,
+    # max_y_degree=DETREND_MAX_Y_DEGREE, max_xy_degree=DETREND_MAX_XY_DEGREE):
+    # observe only the currently-shipped fit.
     fit_mask = bead_exclusion_mask(Z_mm)
     Zd, coef = robust_plane_detrend(
         Z_mm, x_actual_mm, y_mm,
         order=DETREND_POLY_ORDER, fit_mask=fit_mask, max_y_degree=DETREND_MAX_Y_DEGREE,
+        max_xy_degree=DETREND_MAX_XY_DEGREE,
     )
     plane = Z_mm - Zd
 
