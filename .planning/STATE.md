@@ -2,16 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-17-PLAN.md
-last_updated: "2026-07-23T14:48:40.354Z"
+current_phase: 01
+current_phase_name: target-extraction-contract
+status: verifying
+stopped_at: Completed 01-18-PLAN.md
+last_updated: "2026-07-23T14:53:27.254Z"
 last_activity: 2026-07-23
+last_activity_desc: Completed 01-17-PLAN.md (Amendment A8 sign-off request regenerated; awaiting human /gsd-verify-work 1 round)
 progress:
-  total_phases: 5
-  completed_phases: 0
+  total_phases: 1
+  completed_phases: 1
   total_plans: 18
-  completed_plans: 17
-  percent: 94
+  completed_plans: 18
 ---
 
 # Project State
@@ -27,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 
 Phase: 01 (target-extraction-contract) — EXECUTING
 Plan: 18 of 18
-Status: Executing Phase 01
+Status: Phase complete — ready for verification
 Last activity: 2026-07-23 -- Completed 01-17-PLAN.md (Amendment A8 sign-off request regenerated; awaiting human /gsd-verify-work 1 round)
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -73,6 +75,7 @@ Progress: [█████████░] 94%
 | Phase 01 P15 | 6 min | 3 tasks | 2 files |
 | Phase 01-target-extraction-contract P16 | 25min | 2 tasks | 3 files |
 | Phase 01-target-extraction-contract P17 | 12 min | 2 tasks | 1 files |
+| Phase 01 P18 | 10min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -121,6 +124,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Reconciled REQUIREMENTS.md's TARGET-02 checkbox (flipped [x] to [ ]) with its own traceability row's 'awaiting human visual sign-off' wording; TARGET-01 left untouched.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Closed UAT gap G-01-6 (Amendment A8): halfmax_edges applies clip-exclusion to raw runs before merging (Mechanism A) and gates tracked selection by a history-based joint far-AND-small check against previous_length_mm (Mechanism B), verified against the exact diagnosed track episodes; both UAT-Test-8 crop-edge symptoms resolved; Mechanism C's residual jitter and the widened 10-vs-14 FLAG remain honestly disclosed, not chased.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated 01-SIGNOFF-REQUEST.md against the live Amendment A8 artifact generation (run_id b3f79f207cc1431fa238bb153c04419b; 368/232/309/338 valid bins; widened 0.3182mm 10-vs-14 gap; digest unchanged since A8 adds no new constant), preserving the recorded 2026-07-22 width-ordering override verbatim and adding a new unticked reaffirmation item -- fresh /gsd-verify-work 1 round now unblocked.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Wrote COVERAGE.md as a reasoned declaration (not a fabricated API-surface matrix) satisfying the api-coverage seal gate (block: false), rather than assuming file presence alone.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Annotated 01-UAT.md's G-01-6 with a post_fix_note recording Amendment A8's outcome without touching its status: field -- verified positionally that the verdict and gap-ledger shape are unchanged.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Disclosed WR-01 (classify_column drift from targets.halfmax_edges post-Amendment-A8) as accepted, comment-only debt in scripts/diagnose_track10_coverage.py rather than re-syncing the hand-duplicated logic a third time.
 
 ### Pending Todos
 
@@ -146,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-23T14:48:40.345Z
-Stopped at: Completed 01-17-PLAN.md
+Last session: 2026-07-23T14:53:27.245Z
+Stopped at: Completed 01-18-PLAN.md
 Resume file: None
