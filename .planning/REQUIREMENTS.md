@@ -9,7 +9,7 @@ Requirements for the must-ship, 8-day pipeline. Each maps to roadmap phases.
 
 ### Target Contract & Extraction
 
-- [x] **TARGET-01**: The local-width target contract is specified and documented before extraction code is written — width definition (`w_i(x)` = upper − lower boundary at each `x`), extraction threshold rule, spatial smoothing scale, output grid resolution (0.2mm, matching thermal frame spacing), the valid-coordinate mask, and an explicit, consistent rule for handling Track 21's incomplete profilometry coverage. One rule is applied across all 4 tracks — no per-track tuning of the extraction method.
+- [ ] **TARGET-01**: The local-width target contract is specified and documented before extraction code is written — width definition (`w_i(x)` = upper − lower boundary at each `x`), extraction threshold rule, spatial smoothing scale, output grid resolution (0.2mm, matching thermal frame spacing), the valid-coordinate mask, and an explicit, consistent rule for handling Track 21's incomplete profilometry coverage. One rule is applied across all 4 tracks — no per-track tuning of the extraction method.
 - [ ] **TARGET-02**: The height-map target extractor implements the locked TARGET-01 contract and is visually QA'd (extracted width/boundary overlaid on the raw + detrended height map) against all 4 tracks before being trusted downstream.
 
 ### Data Pipeline
@@ -78,7 +78,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TARGET-01 | Phase 1 | Complete |
+| TARGET-01 | Phase 1 | Gaps Found |
 | TARGET-02 | Phase 1 | Awaiting human visual sign-off on regenerated QA figures — see `01-SIGNOFF-REQUEST.md` |
 | DATA-01 | Phase 2 | Pending |
 | DATA-02 | Phase 2 | Pending |
