@@ -192,18 +192,112 @@ def test_halfmax_edges_rejects_implausibly_narrow_tracked_candidate():
     )
 
 
-def test_merged_run_touching_boundary_remains_excluded():
+def test_halfmax_edges_recovers_leading_edge_swallowed_interior_run():
+    # Mechanism A (G-01-6, Amendment A8): mirrors track 10's chronic
+    # y-index-0 leading edge. A raw run touching the LEADING boundary
+    # (start == 0) sits within MAX_RUN_MERGE_GAP_PIXELS of an otherwise-valid
+    # interior run. Under the old merge-then-clip ordering both were fused
+    # and the whole fused span (including the legitimate interior run) was
+    # discarded as edge-touching. Under the clip-before-merge fix, the
+    # edge-touching raw run is filtered out before merging is ever
+    # attempted, so the interior run must survive.
     y_mm = np.arange(480, dtype=np.float64) * 0.004
     prof = np.zeros(480, dtype=np.float64)
-    prof[5:15] = 0.02
-    prof[20:480] = 0.02  # touches the trailing boundary
+    prof[:10] = 0.02  # touches the leading boundary (start == 0)
+    prof[15:400] = 0.02  # interior run, gap of 5 <= MAX_RUN_MERGE_GAP_PIXELS
 
     edges = targets.halfmax_edges(prof, y_mm, previous_center=None)
-    require(
-        edges is None,
-        "a run that merges into a boundary-touching span must remain excluded, "
-        "exactly as an originally-clipped run would be",
+    require(edges is not None, "the surviving interior run must produce valid edges")
+    y_lower, y_upper = edges
+    expected_lower = 0.5 * (y_mm[14] + y_mm[15])
+    expected_upper = 0.5 * (y_mm[399] + y_mm[400])
+    require(np.isclose(y_lower, expected_lower), "lower edge must match the interior run's start")
+    require(np.isclose(y_upper, expected_upper), "upper edge must match the interior run's stop")
+
+
+def test_halfmax_edges_recovers_trailing_edge_swallowed_interior_run():
+    # Mechanism A (G-01-6, Amendment A8): mirrors track 21's chronic
+    # y-index-479 trailing edge, and replaces
+    # test_merged_run_touching_boundary_remains_excluded (01-14/Amendment
+    # A7) -- this EXACT fixture's correct outcome REVERSES under this fix:
+    # under the old merge-then-clip ordering this asserted `edges is None`
+    # (the interior run was swallowed by the trailing-edge-touching run);
+    # under the clip-before-merge fix (this plan, 01-16,
+    # .planning/debug/boundary-fragmentation-crop-edge-post-A7-visual-signoff.md
+    # Mechanism A) the interior run is filtered from the boundary-touching
+    # run BEFORE merging, so it must now survive and produce valid edges.
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    prof = np.zeros(480, dtype=np.float64)
+    prof[100:150] = 0.02  # interior run
+    prof[155:480] = 0.02  # touches the trailing boundary, gap of 5 <= MAX_RUN_MERGE_GAP_PIXELS
+
+    edges = targets.halfmax_edges(prof, y_mm, previous_center=None)
+    require(edges is not None, "the surviving interior run must produce valid edges, not None")
+    y_lower, y_upper = edges
+    expected_lower = 0.5 * (y_mm[99] + y_mm[100])
+    expected_upper = 0.5 * (y_mm[149] + y_mm[150])
+    require(np.isclose(y_lower, expected_lower), "lower edge must match the interior run's start")
+    require(np.isclose(y_upper, expected_upper), "upper edge must match the interior run's stop")
+
+
+def _established_tracked_history(run_start=100, run_stop=300):
+    # Establishes previous_center/previous_length_mm from a REAL
+    # halfmax_edges call (not hand-derived numbers), per this plan's
+    # <behavior> instruction for Tests 4-6.
+    y_mm = np.arange(480, dtype=np.float64) * 0.004
+    established = np.zeros(480, dtype=np.float64)
+    established[run_start:run_stop] = 0.02
+    established_edges = targets.halfmax_edges(established, y_mm, previous_center=None)
+    previous_center = 0.5 * (established_edges[0] + established_edges[1])
+    previous_length_mm = established_edges[1] - established_edges[0]
+    return y_mm, previous_center, previous_length_mm
+
+
+def test_halfmax_edges_rejects_lone_candidate_far_and_small_versus_tracked_history():
+    # Mechanism B (G-01-6, Amendment A8): a single tiny candidate, both far
+    # from previous_center (farther than previous_length_mm) and small
+    # (below MIN_TRACKED_LENGTH_RATIO * previous_length_mm), with no
+    # same-column competitor. The same-column MIN_TRACKED_LENGTH_RATIO gate
+    # is structurally moot here (it trivially satisfies its own ratio) --
+    # the new history-based joint far-AND-small gate must reject it.
+    y_mm, previous_center, previous_length_mm = _established_tracked_history()
+    prof = np.zeros(480, dtype=np.float64)
+    prof[440:470] = 0.02  # small (len 30, 0.116mm << 0.4mm) and far (~1.02mm >> 0.8mm) from previous_center (~0.798mm)
+
+    edges = targets.halfmax_edges(
+        prof, y_mm, previous_center=previous_center, previous_length_mm=previous_length_mm,
     )
+    require(edges is None, "a lone candidate both far and small versus tracked history must be rejected")
+
+
+def test_halfmax_edges_accepts_lone_candidate_small_but_close_to_tracked_history():
+    # Mechanism B: a single tiny candidate positioned CLOSE to
+    # previous_center (within previous_length_mm) -- still small, but NOT
+    # far. This proves the gate is a joint AND, not a size-only veto: a
+    # plausible narrowing of the tracked bead must never be rejected.
+    y_mm, previous_center, previous_length_mm = _established_tracked_history()
+    prof = np.zeros(480, dtype=np.float64)
+    prof[245:275] = 0.02  # small (len 30, 0.116mm << 0.4mm) but close (~0.24mm << 0.8mm) to previous_center (~0.798mm)
+
+    edges = targets.halfmax_edges(
+        prof, y_mm, previous_center=previous_center, previous_length_mm=previous_length_mm,
+    )
+    require(edges is not None, "a small-but-close lone candidate must not be rejected on size alone")
+
+
+def test_halfmax_edges_accepts_lone_candidate_far_but_large_versus_tracked_history():
+    # Mechanism B: a single candidate at least MIN_TRACKED_LENGTH_RATIO *
+    # previous_length_mm in length, but farther than previous_length_mm from
+    # previous_center. This proves distance alone never rejects a large
+    # candidate (plausible drift/relocation).
+    y_mm, previous_center, previous_length_mm = _established_tracked_history()
+    prof = np.zeros(480, dtype=np.float64)
+    prof[355:465] = 0.02  # large (len 110) but far from previous_center (~0.798mm)
+
+    edges = targets.halfmax_edges(
+        prof, y_mm, previous_center=previous_center, previous_length_mm=previous_length_mm,
+    )
+    require(edges is not None, "a far-but-large lone candidate must not be rejected on distance alone")
 
 
 def test_extract_targets_from_arrays_recovers_from_track8_style_propagating_wrong_lock():
@@ -268,6 +362,37 @@ def test_extract_targets_from_arrays_merges_track10_style_fragmented_bead():
             abs(result["w_mm"][index] - expected_width) < 0.05,
             f"column {index} must report the merged bead's full width, not a narrow sub-fragment",
         )
+
+
+def test_extract_targets_from_arrays_rejects_track8_style_single_candidate_trigger_column():
+    # Mirrors Track 8's x=24.1/24.5/24.7/25.5mm single-candidate-column
+    # episode (Mechanism B, G-01-6, Amendment A8) -- NOT covered by
+    # test_extract_targets_from_arrays_recovers_from_track8_style_propagating_wrong_lock,
+    # whose synthetic decoy always co-occurs with the true bead from the
+    # recovery column onward rather than ever standing entirely alone. Here,
+    # a true bead is tracked correctly for several columns, then ONE column
+    # has ONLY a tiny far candidate (no competitor at all in that column),
+    # then the true bead resumes. The trigger column must now be correctly
+    # invalidated rather than wrongly locked onto the tiny candidate, and
+    # the resumed columns must immediately recover onto the true bead.
+    y_mm = 0.004 * np.arange(480, dtype=np.float64)
+    true_bead = np.zeros(480, dtype=np.float64)
+    true_bead[150:350] = 0.02  # len 200
+    tiny_far_alone = np.zeros(480, dtype=np.float64)
+    tiny_far_alone[10:20] = 0.02  # len 10, far from the true bead's center (~0.998mm)
+
+    profiles = {
+        0: true_bead, 1: true_bead, 2: true_bead, 3: true_bead,
+        4: tiny_far_alone,
+        5: true_bead, 6: true_bead,
+    }
+    Zd, x_actual_mm, y_mm = _binned_synthetic_profiles(profiles)
+
+    result = targets.extract_targets_from_arrays(Zd, x_actual_mm, y_mm)
+    require(not result["valid_mask"][4], "the single-candidate trigger column must be invalidated, not locked")
+    for index in (5, 6):
+        center = np.mean([result["y_lower_mm"][index], result["y_upper_mm"][index]])
+        require(center > 0.5, f"column {index} must immediately recover onto the true bead")
 
 
 def test_bead_mask_rule_is_track_independent():
@@ -832,9 +957,14 @@ if __name__ == "__main__":
         test_merge_adjacent_runs_bridges_short_below_threshold_gaps,
         test_merge_adjacent_runs_does_not_bridge_large_gaps,
         test_halfmax_edges_rejects_implausibly_narrow_tracked_candidate,
-        test_merged_run_touching_boundary_remains_excluded,
+        test_halfmax_edges_recovers_leading_edge_swallowed_interior_run,
+        test_halfmax_edges_recovers_trailing_edge_swallowed_interior_run,
+        test_halfmax_edges_rejects_lone_candidate_far_and_small_versus_tracked_history,
+        test_halfmax_edges_accepts_lone_candidate_small_but_close_to_tracked_history,
+        test_halfmax_edges_accepts_lone_candidate_far_but_large_versus_tracked_history,
         test_extract_targets_from_arrays_recovers_from_track8_style_propagating_wrong_lock,
         test_extract_targets_from_arrays_merges_track10_style_fragmented_bead,
+        test_extract_targets_from_arrays_rejects_track8_style_single_candidate_trigger_column,
         test_bead_mask_rule_is_track_independent,
         test_extract_targets_from_arrays_boundary_tracking_survives_decoy_blob,
         test_halfmax_edges_resets_stale_history_after_long_invalid_gap,
