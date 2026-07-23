@@ -107,6 +107,22 @@ def fitted_surface_edge_report(Z_mm, Zd):
     }
 
 
+# WR-01 (01-REVIEW.md): classify_column below is a hand-written
+# reimplementation of targets.halfmax_edges' candidate-selection and
+# rejection branches, last synced to the pre-Amendment-A8 behavior. It has
+# NOT been updated for Amendment A8 and now diverges from production in two
+# ways: (1) ordering -- it merges runs and then filters out boundary-touching
+# ones, while production now filters non-boundary-touching raw runs BEFORE
+# merging (Mechanism A); (2) it has no equivalent of production's
+# history-based far-AND-small plausibility gate keyed on previous_length_mm
+# (Mechanism B). As a consequence, the committed
+# processed_data/diagnostics/track10_coverage_diagnosis.csv is a historical
+# baseline whose per-track rejection counts do not match the current
+# production valid_mask sums, and must never be read as a live
+# characterization of what src/targets.py ships. The authoritative source of
+# production behavior is targets.halfmax_edges in src/targets.py. This is
+# accepted, disclosed debt; the durable fix is to call targets.halfmax_edges
+# directly rather than duplicating it, deferred out of this phase.
 def classify_column(prof, y_mm, previous_center):
     # Mirrors targets.halfmax_edges' rejection branches so this diagnostic can
     # attribute a reason to each bin; must be kept in step with that function.
