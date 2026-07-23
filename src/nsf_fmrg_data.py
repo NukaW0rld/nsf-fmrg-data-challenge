@@ -281,6 +281,7 @@ def robust_plane_detrend(Z_mm, x_mm, y_mm, stride_x=40, stride_y=2, order=1, fit
         if keep_new.sum() < 100:
             break
         keep = keep_new
+    coef, *_ = np.linalg.lstsq(A[keep], z[keep], rcond=None)
     x_full = x_mm[None, :] - x_center
     y_full = y_mm[:, None] - y_center
     plane = sum(
