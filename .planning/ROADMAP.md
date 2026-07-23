@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 16 plans (15 executed, 1 gap-closure plan pending)
+**Plans:** 18 plans (16 executed, 2 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -105,6 +105,14 @@ Plans:
 **Wave 15** *(gap closure, blocked on Wave 14 completion)*
 
 - [x] 01-16-PLAN.md — G-01-6: reorder halfmax_edges' D-01/D-03 clip-exclusion before merge_adjacent_runs (Mechanism A) and gate tracked selection by a history-based far-AND-small plausibility check (Mechanism B, Amendment A8), regenerate all 4 tracks, and report the fragmentation/jump-statistic/crop-edge outcome honestly without re-litigating the accepted 10-vs-14 FLAG or implementing the out-of-scope Mechanism C
+
+**Wave 16** *(gap closure, blocked on Wave 15 completion)*
+
+- [ ] 01-17-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A8 run, with every number re-derived at execution time from `check_targets.py` and `manifest.json` (never transcribed): live run_id/timestamp, the disclosure that the provenance digest is unchanged because A8 added no new constant, live coverage table, the widened 10-vs-14 gap, A8's two behavioral contract rules, refreshed figure questions, the preserved human width-ordering override plus one new unticked reaffirmation item — documentation only, no source/test/constant/pipeline/requirements change
+
+**Wave 17** *(gap closure, blocked on Wave 16 completion)*
+
+- [ ] 01-18-PLAN.md — Phase-seal hygiene with no verdict changes: reasoned no-external-API `COVERAGE.md` declaration verified against the real api-coverage gate, a dated G-01-6 annotation in `01-UAT.md` whose pass condition is that the verdict is provably unchanged, and a comment-only WR-01 historical-baseline disclaimer on the drifted `scripts/diagnose_track10_coverage.py`
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
