@@ -183,7 +183,7 @@ def merge_adjacent_runs(runs, max_gap):
     return merged
 
 
-def halfmax_edges(prof, y_mm, previous_center=None):
+def halfmax_edges(prof, y_mm, previous_center=None, previous_length_mm=None):
     prof = np.asarray(prof, dtype=np.float64)
     y_mm = np.asarray(y_mm, dtype=np.float64)
     finite = np.isfinite(prof)
@@ -198,17 +198,23 @@ def halfmax_edges(prof, y_mm, previous_center=None):
 
     threshold = base + HALF_MAX_FRACTION * (peak - base)
     above = np.where(finite, prof > threshold, False)
-    # Merge noise-fragmented above-threshold sub-runs before clip-exclusion,
-    # so a merged run that now spans to a boundary is correctly excluded,
-    # exactly as an originally-clipped run would be.
-    merged_runs = merge_adjacent_runs(all_true_runs(above), MAX_RUN_MERGE_GAP_PIXELS)
-    # A run clipped by the measured strip has an unknowable true edge and is
-    # never a tracking candidate, even when it is closest to prior history.
-    candidates = [
-        (start, stop)
-        for start, stop in merged_runs
-        if start != 0 and stop != len(prof)
+    # Amendment A8 (Mechanism A fix): apply the D-01/D-03 clip-exclusion test
+    # to each RAW run BEFORE merging, not after. This guarantees a merged
+    # candidate can never touch a y-strip boundary -- its start/stop are
+    # always drawn from already-interior surviving runs -- so no separate
+    # post-merge clip filter is needed. Under the old merge-then-clip
+    # ordering, a raw edge-touching run within MAX_RUN_MERGE_GAP_PIXELS of an
+    # otherwise-valid interior run would fuse with it and the whole fused
+    # span (including the legitimate interior run) was discarded as
+    # edge-touching -- silently swallowing a legitimate candidate (see
+    # .planning/debug/boundary-fragmentation-crop-edge-post-A7-visual-signoff.md,
+    # Mechanism A).
+    raw_runs = all_true_runs(above)
+    non_edge_runs = [
+        run for run in raw_runs
+        if run[0] != 0 and run[1] != len(prof)
     ]
+    candidates = merge_adjacent_runs(non_edge_runs, MAX_RUN_MERGE_GAP_PIXELS)
     if not candidates:
         return None
     if previous_center is None:
@@ -224,6 +230,35 @@ def halfmax_edges(prof, y_mm, previous_center=None):
             run for run in candidates
             if (run[1] - run[0]) >= MIN_TRACKED_LENGTH_RATIO * max_len
         ]
+        # Amendment A8 (Mechanism B fix): the same-column-relative filter
+        # above is structurally moot when a column has exactly one
+        # candidate -- it trivially satisfies its own ratio. Add a
+        # history-based joint far-AND-small gate: a lone candidate is only
+        # rejected when it is BOTH farther from previous_center than the
+        # recently-tracked run's own physical width (previous_length_mm)
+        # AND smaller than MIN_TRACKED_LENGTH_RATIO of that same width. This
+        # introduces NO new named constant -- it reuses MIN_TRACKED_LENGTH_RATIO
+        # for the "small" test and derives the "far" distance scale from the
+        # just-computed previous_length_mm itself (a runtime-derived
+        # quantity, not a new tunable number). A candidate close to
+        # previous_center is never rejected on size alone (plausible
+        # narrowing), and a candidate as large as recent history is never
+        # rejected on distance alone (plausible drift/relocation).
+        if previous_length_mm is not None:
+            def _is_implausible_versus_history(run):
+                start, stop = run
+                length_mm = y_mm[stop - 1] - y_mm[start]
+                is_small = length_mm < MIN_TRACKED_LENGTH_RATIO * previous_length_mm
+                mid_y = y_mm[(start + stop - 1) // 2]
+                is_far = abs(mid_y - previous_center) > previous_length_mm
+                return is_small and is_far
+
+            history_plausible = [
+                run for run in plausible if not _is_implausible_versus_history(run)
+            ]
+            if not history_plausible:
+                return None
+            plausible = history_plausible
         start, stop = min(
             plausible,
             key=lambda run: (
@@ -324,11 +359,13 @@ def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
     y_upper_raw = np.full(TARGET_GRID_N, np.nan, dtype=np.float64)
     y_lower_raw = np.full(TARGET_GRID_N, np.nan, dtype=np.float64)
     previous_center = None
+    previous_length_mm = None
     invalid_run_columns = 0
 
     for i, x_center in enumerate(x_grid):
         if invalid_run_columns >= MAX_TRACKING_GAP_COLUMNS:
             previous_center = None
+            previous_length_mm = None
         prof = bin_profile(Zd, x_actual_mm, x_center)
         if prof is None:
             invalid_run_columns += 1
@@ -337,12 +374,17 @@ def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
         if not ok:
             invalid_run_columns += 1
             continue
-        edges = halfmax_edges(prof, y_mm, previous_center=previous_center)
+        edges = halfmax_edges(
+            prof, y_mm,
+            previous_center=previous_center,
+            previous_length_mm=previous_length_mm,
+        )
         if edges is None:
             invalid_run_columns += 1
             continue
         y_lower_raw[i], y_upper_raw[i] = edges
         previous_center = 0.5 * (edges[0] + edges[1])
+        previous_length_mm = edges[1] - edges[0]
         invalid_run_columns = 0
 
     y_lower, y_upper, w_mm, valid_mask = finalize_smoothed_boundaries(
