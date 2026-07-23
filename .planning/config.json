@@ -1,5 +1,5 @@
 {
-  "model_profile": "adaptive",
+  "model_profile": "inherit",
   "commit_docs": true,
   "parallelization": true,
   "search_gitignored": false,
@@ -49,7 +49,11 @@
     "security_block_on": "high",
     "ui_review": false,
     "tdd_mode": false,
-    "use_worktrees": true
+    "use_worktrees": false,
+    "plan_review_convergence": true,
+    "_auto_chain_active": false,
+    "build_command": ".venv/bin/python -m py_compile src/*.py scripts/*.py tests/*.py",
+    "test_command": "for f in tests/test_*.py; do echo \"-- $f --\"; .venv/bin/python \"$f\" || exit 1; done"
   },
   "ship": {
     "pr_body_sections": []
