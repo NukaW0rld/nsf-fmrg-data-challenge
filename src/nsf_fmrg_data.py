@@ -206,6 +206,11 @@ def load_wyko_asc(height_dir, track_id, crop_to_common=True):
             count += 1
             if count >= n_expected:
                 break
+    if count < n_expected:
+        raise ValueError(
+            f'{path} RAW_DATA body supplied {count} rows, expected {n_expected} '
+            f'(x_size={x_size} * y_size={y_size}).'
+        )
     Z_x_y = z_mm_flat.reshape((x_size, y_size))
     Z_yx = Z_x_y.T
     x_local = np.arange(x_size, dtype=np.float64) * pixel
