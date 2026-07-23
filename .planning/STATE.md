@@ -2,19 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: target-extraction-contract
 status: executing
-stopped_at: Completed 01-16-PLAN.md
-last_updated: "2026-07-23T04:49:08.628Z"
-last_activity: 2026-07-22
-last_activity_desc: Phase 01 planning complete
+stopped_at: Completed 01-17-PLAN.md
+last_updated: "2026-07-23T14:48:40.354Z"
+last_activity: 2026-07-23
 progress:
-  total_phases: 1
-  completed_phases: 1
+  total_phases: 5
+  completed_phases: 0
   total_plans: 18
-  completed_plans: 16
-  percent: 100
+  completed_plans: 17
+  percent: 94
 ---
 
 # Project State
@@ -29,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 2 of 16
-Status: Ready to execute
-Last activity: 2026-07-22 — Phase 01 planning complete
+Plan: 18 of 18
+Status: Executing Phase 01
+Last activity: 2026-07-23 -- Completed 01-17-PLAN.md (Amendment A8 sign-off request regenerated; awaiting human /gsd-verify-work 1 round)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -75,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 01 P14 | 15min | 2 tasks | 4 files |
 | Phase 01 P15 | 6 min | 3 tasks | 2 files |
 | Phase 01-target-extraction-contract P16 | 25min | 2 tasks | 3 files |
+| Phase 01-target-extraction-contract P17 | 12 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -122,6 +120,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated 01-SIGNOFF-REQUEST.md against the live Amendment-A7 artifact generation (razor-thin 50.50% track-10 coverage margin, doubled 0.2404mm 10-vs-14 gap, MIXED fragmentation outcome), replacing every stale Amendment-A5 figure; every checkbox remains unticked pending /gsd-verify-work 1.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Reconciled REQUIREMENTS.md's TARGET-02 checkbox (flipped [x] to [ ]) with its own traceability row's 'awaiting human visual sign-off' wording; TARGET-01 left untouched.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Closed UAT gap G-01-6 (Amendment A8): halfmax_edges applies clip-exclusion to raw runs before merging (Mechanism A) and gates tracked selection by a history-based joint far-AND-small check against previous_length_mm (Mechanism B), verified against the exact diagnosed track episodes; both UAT-Test-8 crop-edge symptoms resolved; Mechanism C's residual jitter and the widened 10-vs-14 FLAG remain honestly disclosed, not chased.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated 01-SIGNOFF-REQUEST.md against the live Amendment A8 artifact generation (run_id b3f79f207cc1431fa238bb153c04419b; 368/232/309/338 valid bins; widened 0.3182mm 10-vs-14 gap; digest unchanged since A8 adds no new constant), preserving the recorded 2026-07-22 width-ordering override verbatim and adding a new unticked reaffirmation item -- fresh /gsd-verify-work 1 round now unblocked.
 
 ### Pending Todos
 
@@ -147,6 +146,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-23T02:47:58.402Z
-Stopped at: Completed 01-16-PLAN.md
+Last session: 2026-07-23T14:48:40.345Z
+Stopped at: Completed 01-17-PLAN.md
 Resume file: None

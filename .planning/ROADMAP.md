@@ -108,7 +108,7 @@ Plans:
 
 **Wave 16** *(gap closure, blocked on Wave 15 completion)*
 
-- [ ] 01-17-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A8 run, with every number re-derived at execution time from `check_targets.py` and `manifest.json` (never transcribed): live run_id/timestamp, the disclosure that the provenance digest is unchanged because A8 added no new constant, live coverage table, the widened 10-vs-14 gap, A8's two behavioral contract rules, refreshed figure questions, the preserved human width-ordering override plus one new unticked reaffirmation item — documentation only, no source/test/constant/pipeline/requirements change
+- [x] 01-17-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A8 run, with every number re-derived at execution time from `check_targets.py` and `manifest.json` (never transcribed): live run_id/timestamp, the disclosure that the provenance digest is unchanged because A8 added no new constant, live coverage table, the widened 10-vs-14 gap, A8's two behavioral contract rules, refreshed figure questions, the preserved human width-ordering override plus one new unticked reaffirmation item — documentation only, no source/test/constant/pipeline/requirements change
 
 **Wave 17** *(gap closure, blocked on Wave 16 completion)*
 
