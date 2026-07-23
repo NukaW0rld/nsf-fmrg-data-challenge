@@ -121,9 +121,14 @@ def print_results(summaries, track_ids=TRACK_IDS):
     print("Ordering FLAG outcomes are documented and never used to tune locked extraction constants.")
 
 
-def bin_profile(Zd, x_actual_mm, x_center):
+def bin_profile(Zd, x_actual_mm, x_center, inclusive_upper=False):
     half_step = TARGET_GRID_STEP_MM / 2.0
-    columns = (x_actual_mm >= x_center - half_step) & (x_actual_mm < x_center + half_step)
+    lower = x_actual_mm >= x_center - half_step
+    if inclusive_upper:
+        upper = x_actual_mm <= x_center + half_step
+    else:
+        upper = x_actual_mm < x_center + half_step
+    columns = lower & upper
     if columns.sum() < MIN_COLUMNS_PER_BIN:
         return None
     # Bin first because native-column gap checks invalidate nearly every raw column.
@@ -366,7 +371,7 @@ def extract_targets_from_arrays(Zd, x_actual_mm, y_mm):
         if invalid_run_columns >= MAX_TRACKING_GAP_COLUMNS:
             previous_center = None
             previous_length_mm = None
-        prof = bin_profile(Zd, x_actual_mm, x_center)
+        prof = bin_profile(Zd, x_actual_mm, x_center, inclusive_upper=(i == TARGET_GRID_N - 1))
         if prof is None:
             invalid_run_columns += 1
             continue
