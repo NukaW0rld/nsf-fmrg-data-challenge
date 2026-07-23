@@ -95,6 +95,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 *Correction (2026-07-22):* TARGET-02's checkbox above was still ticked `[x]` even though the Traceability row it sits beside continued to read "Awaiting human visual sign-off" — an Info-severity inconsistency `01-VERIFICATION.md`'s Anti-Patterns table flagged (lines 12-13 vs 81-82). Set to unticked `[ ]` here so the checkbox and its own traceability row agree. No sign-off has been recorded by any human reviewer; the traceability row's "Awaiting human visual sign-off" wording is unchanged and still points at `01-SIGNOFF-REQUEST.md`, now regenerated against the live Amendment-A7 artifacts. Basis: `01-VERIFICATION.md`, `01-SIGNOFF-REQUEST.md`.
 
+*Correction (2026-07-22, plan 01-16):* Plan 01-16 closed UAT gap G-01-6 (Amendment A8) and regenerated all four tracks' artifacts (`01-16-ORDERING-OUTCOME.md`), but this is implementation/regeneration progress, not the human visual sign-off TARGET-02's own acceptance criterion requires. An automated tooling step re-ticked this checkbox to `[x]` when marking the plan's frontmatter `requirements` complete; reverted to `[ ]` here for the same reason as the 2026-07-22 correction above — no human reviewer has yet confirmed the regenerated QA figures. Basis: `01-16-SUMMARY.md` (coverage entry D3, `human_judgment: true`), `01-16-ORDERING-OUTCOME.md`.
+
 **Coverage:**
 
 - v1 requirements: 12 total

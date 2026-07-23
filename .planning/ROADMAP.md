@@ -104,7 +104,7 @@ Plans:
 
 **Wave 15** *(gap closure, blocked on Wave 14 completion)*
 
-- [ ] 01-16-PLAN.md — G-01-6: reorder halfmax_edges' D-01/D-03 clip-exclusion before merge_adjacent_runs (Mechanism A) and gate tracked selection by a history-based far-AND-small plausibility check (Mechanism B, Amendment A8), regenerate all 4 tracks, and report the fragmentation/jump-statistic/crop-edge outcome honestly without re-litigating the accepted 10-vs-14 FLAG or implementing the out-of-scope Mechanism C
+- [x] 01-16-PLAN.md — G-01-6: reorder halfmax_edges' D-01/D-03 clip-exclusion before merge_adjacent_runs (Mechanism A) and gate tracked selection by a history-based far-AND-small plausibility check (Mechanism B, Amendment A8), regenerate all 4 tracks, and report the fragmentation/jump-statistic/crop-edge outcome honestly without re-litigating the accepted 10-vs-14 FLAG or implementing the out-of-scope Mechanism C
 
 ### Phase 2: Dataset Alignment & Sample Construction
 

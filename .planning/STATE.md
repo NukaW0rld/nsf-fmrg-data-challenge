@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-15-PLAN.md
-last_updated: "2026-07-22T16:40:21.605Z"
-last_activity: 2026-07-22
+stopped_at: Completed 01-16-PLAN.md
+last_updated: "2026-07-23T02:47:58.411Z"
+last_activity: 2026-07-23
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 16
+  completed_plans: 16
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-19)
 ## Current Position
 
 Phase: 01 (target-extraction-contract) — EXECUTING
-Plan: 2 of 15
+Plan: 2 of 16
 Status: Ready to execute
-Last activity: 2026-07-22
+Last activity: 2026-07-23
 
 Progress: [██████████] 100%
 
@@ -71,6 +71,7 @@ Progress: [██████████] 100%
 | Phase 01 P13 | 18min | 3 tasks | 9 files |
 | Phase 01 P14 | 15min | 2 tasks | 4 files |
 | Phase 01 P15 | 6 min | 3 tasks | 2 files |
+| Phase 01-target-extraction-contract P16 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01-target-extraction-contract]: Closed UAT gap G-01-5 (Amendment A7): halfmax_edges now merges noise-fragmented above-half-max runs before candidate selection and gates tracked selection by length plausibility (MAX_RUN_MERGE_GAP_PIXELS=MAX_GAP_PIXELS, MIN_TRACKED_LENGTH_RATIO=HALF_MAX_FRACTION), fixing the diagnosed self-reinforcing wrong-lock mechanism -- verified against the exact Track 8/Track 10 episodes -- but the real 4-track fragmentation/jump-statistic outcome is mixed, not a uniform improvement, and track 10's coverage margin narrowed to a razor-thin 50.50%.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Regenerated 01-SIGNOFF-REQUEST.md against the live Amendment-A7 artifact generation (razor-thin 50.50% track-10 coverage margin, doubled 0.2404mm 10-vs-14 gap, MIXED fragmentation outcome), replacing every stale Amendment-A5 figure; every checkbox remains unticked pending /gsd-verify-work 1.
 - [Phase ?]: [Phase 01-target-extraction-contract]: Reconciled REQUIREMENTS.md's TARGET-02 checkbox (flipped [x] to [ ]) with its own traceability row's 'awaiting human visual sign-off' wording; TARGET-01 left untouched.
+- [Phase ?]: [Phase 01-target-extraction-contract]: Closed UAT gap G-01-6 (Amendment A8): halfmax_edges applies clip-exclusion to raw runs before merging (Mechanism A) and gates tracked selection by a history-based joint far-AND-small check against previous_length_mm (Mechanism B), verified against the exact diagnosed track episodes; both UAT-Test-8 crop-edge symptoms resolved; Mechanism C's residual jitter and the widened 10-vs-14 FLAG remain honestly disclosed, not chased.
 
 ### Pending Todos
 
@@ -142,6 +144,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-22T16:40:21.596Z
-Stopped at: Completed 01-15-PLAN.md
+Last session: 2026-07-23T02:47:58.402Z
+Stopped at: Completed 01-16-PLAN.md
 Resume file: None
