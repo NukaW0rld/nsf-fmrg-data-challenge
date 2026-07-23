@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-target-extraction-contract
 source: [01-VERIFICATION.md]
 started: 2026-07-20T00:54:17Z
-updated: 2026-07-22T19:20:00Z
+updated: 2026-07-22T19:35:00Z
 ---
 
 ## Current Test
@@ -174,7 +174,19 @@ blocked: 0
   reason: "User reported (visual sign-off, Test 8, re-asked against Amendment A7): residual maps pass and locked-constant provenance passes, but boundary overlays still fail (track 10 remains severely fragmented; tracks 14 and 21 have frequent EKG-like jumps; track 8 still has conspicuous excursions near ~24-27, 48-55, 81-86, and 97-100mm) and width/crop-edge behavior does not get full sign-off (track 10's old terminal V-spike is gone but its right crop-edge band now has only one isolated valid sample; track 21's right crop-edge band ends with an implausibly abrupt terminal drop 0.356->0.340->0.107mm; all four left bands are unassessable). This is a regression/still-open finding against G-01-5's truth after its fix (01-14-PLAN.md) -- recorded as a new gap per verify-work's reconciliation rule rather than reopening the resolved gap."
   severity: major
   test: 8
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "THREE concurrent mechanisms, not one. (A) merge-before-clip ordering (new defect introduced by the 01-14/G-01-5 fix, dominant driver of worsened fragmentation): halfmax_edges runs merge_adjacent_runs BEFORE the D-01/D-03 boundary-clip-exclusion filter, so when a raw edge-touching run (correctly excludable on its own) sits within MAX_RUN_MERGE_GAP_PIXELS=10px of an otherwise-valid interior run, the merge fuses them and the WHOLE fused span is discarded as edge-touching -- swallowing a legitimate candidate. Measured: 65-90% of no_candidates invalidations across all 4 tracks trace to this mechanism; a merge-gap sweep (0/5/10/15/20/30px) shows swallow count increases monotonically with gap size, confirming a structural ordering defect, not a mistuned constant. Also corrects 01-14-ORDERING-OUTCOME.md's own mistaken attribution of the worsening to the plausibility gate -- the gate cannot zero out a non-empty candidate list by construction. (B) MIN_TRACKED_LENGTH_RATIO is a same-column-relative gate with no protection when a column has exactly one (small/spurious) candidate to compare against itself -- measured 14-72% of tracked selections across the 4 tracks occur in single-candidate columns where the gate is structurally moot, producing frequent short (1-2 column) width blips that mechanically increase contiguous-run fragmentation counts even though each episode is shorter than pre-01-14. (C) Greedy nearest-to-previous_center selection among multiple simultaneously-plausible candidates still hops between distinct real features (measured track 21 tail: raw y-center hops up to 1.52mm across 5 consecutive columns) -- this is the DP/Viterbi joint-tracker gap 01-14-PLAN.md explicitly named and deferred as out of scope; still active, concentrated at domain far-edges. Crop-edge right-side irregularities (track 10 island, track 21 terminal drop) are Mechanisms A/C at their most acute, compounded at the array's last 1-2 indices by nan_savgol's truncated smoothing window. Crop-edge LEFT-side unassessable bands are a separate, non-defective, already-locked native-data-availability limitation (MIN_COLUMNS_PER_BIN/MAX_GAP_PIXELS), not part of this defect class."
+  artifacts:
+    - path: "src/targets.py:186-256"
+      issue: "halfmax_edges applies merge_adjacent_runs (168-183) before the D-01/D-03 boundary-clip-exclusion filter (200-213): an edge-touching raw run merged with a valid interior run causes the whole fused span to be discarded as edge-touching, silently swallowing a legitimate candidate (measured 65-90% of no_candidates invalidations per track)"
+    - path: "src/targets.py:214-234"
+      issue: "MIN_TRACKED_LENGTH_RATIO plausibility gate (Amendment A7) is a same-column-relative comparison with no effect when a column has exactly one candidate (14-72% of tracked selections per track), allowing lone spurious short candidates through unchallenged"
+    - path: "src/targets.py:322-359"
+      issue: "extract_targets_from_arrays' previous_center update (line 345) has no protection against greedy proximity-only hops between multiple simultaneously-plausible candidates in the same column (measured up to 1.52mm raw hop at track 21's tail) -- the explicitly-deferred DP/Viterbi joint-tracker gap from 01-14-PLAN.md"
+    - path: "src/targets.py:259-277"
+      issue: "nan_savgol's boundary window truncates to 3 points at the array's last 1-2 indices (398-399), compounding Mechanism C's raw tracked-position instability exactly where the crop-edge terminal-drop symptom manifests"
+  missing:
+    - "Mechanism A (tractable, scoped): reorder halfmax_edges so the D-01/D-03 clip-exclusion test applies to each raw run BEFORE merge_adjacent_runs, merging only among already-non-edge-touching runs -- validated via throwaway analysis to recover all 111 swallowed columns across all 4 tracks with no loss of interior noise-fragmentation-merging benefit"
+    - "Mechanism B (tractable, scoped): add a distance-from-recent-tracked-history dimension to the plausibility gate (not just same-column relative size), so a lone candidate far from previous_center and small relative to recent tracked width can be rejected even with no same-column competitor"
+    - "Mechanism C: HONEST-OUTCOME GUARD finding -- no new tractable fix beyond what 01-14 already considered and correctly deferred (full DP/Viterbi joint sequence tracker) was found; its cost concentrates at domain far-edges and on tracks 10/21 specifically, directly causing the still-open crop-edge complaint, but full resolution requires the already-named, already-scoped-out sequence-global method"
+    - "Left-edge unassessable bands: no fix indicated -- recommend accepting as expected, correctly-disclosed native-data-availability behavior (MIN_COLUMNS_PER_BIN/MAX_GAP_PIXELS), not part of this defect class"
+  debug_session: ".planning/debug/boundary-fragmentation-crop-edge-post-A7-visual-signoff.md"
