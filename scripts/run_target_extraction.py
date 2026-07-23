@@ -322,7 +322,12 @@ def publish_staging_dir(staging_dir: Path, targets_dir: Path, project_root: Path
         targets_dir.rename(backup_dir)
     if targets_dir.is_symlink() or staging_dir.is_symlink():
         raise ValueError(f"Refusing to rename a symlinked path: {staging_dir} -> {targets_dir}.")
-    staging_dir.rename(targets_dir)
+    try:
+        staging_dir.rename(targets_dir)
+    except BaseException:
+        if backup_dir.exists() and not targets_dir.exists():
+            backup_dir.rename(targets_dir)
+        raise
     if backup_dir.is_symlink():
         raise ValueError(f"Refusing to remove a symlinked backup path: {backup_dir}.")
     if backup_dir.exists():
