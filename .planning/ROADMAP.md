@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. QA plots overlay the extracted width/boundary on both the raw and detrended height map for all 4 tracks, including track 21's gap-heavy regions, and are visually confirmed sane (no sawtooth/high-frequency jitter, no silently dropped gaps).
   4. The identical extraction rule is applied across all 4 tracks with no per-track-tuned thresholds — confirmed by code inspection showing one shared parameterization.
 
-**Plans:** 15 plans (14 executed, 1 gap-closure plan pending)
+**Plans:** 16 plans (15 executed, 1 gap-closure plan pending)
 
 Plans:
 **Wave 1**
@@ -101,6 +101,10 @@ Plans:
 **Wave 14** *(gap closure, blocked on Wave 13 completion)*
 
 - [x] 01-15-PLAN.md — Regenerate the stale `01-SIGNOFF-REQUEST.md` against the live Amendment-A7 run (razor-thin 50.50% track-10 margin, doubled 10-vs-14 gap, MIXED fragmentation outcome, all 7 amendment constants) and reconcile `REQUIREMENTS.md`'s TARGET-02 checkbox with its traceability row — documentation only, no source/test/constant/pipeline change
+
+**Wave 15** *(gap closure, blocked on Wave 14 completion)*
+
+- [ ] 01-16-PLAN.md — G-01-6: reorder halfmax_edges' D-01/D-03 clip-exclusion before merge_adjacent_runs (Mechanism A) and gate tracked selection by a history-based far-AND-small plausibility check (Mechanism B, Amendment A8), regenerate all 4 tracks, and report the fragmentation/jump-statistic/crop-edge outcome honestly without re-litigating the accepted 10-vs-14 FLAG or implementing the out-of-scope Mechanism C
 
 ### Phase 2: Dataset Alignment & Sample Construction
 
@@ -181,7 +185,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Target Extraction & Contract | 12/14 | In Progress (gap closure: G-01-4, G-01-5) |  |
+| 1. Target Extraction & Contract | 15/16 | In Progress (gap closure: G-01-6) |  |
 | 2. Dataset Alignment & Sample Construction | 0/TBD | Not started | - |
 | 3. LOTO Evaluation Harness & Metrics | 0/TBD | Not started | - |
 | 4. Thermal-Only Uncertainty-Aware Baseline Model | 0/TBD | Not started | - |
